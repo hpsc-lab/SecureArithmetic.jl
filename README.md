@@ -90,7 +90,7 @@ x1 shifted circularly by 2 = [4.0, 5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0]
 If you use SecureArithmetic.jl in your own research, please cite this repository as follows:
 ```bibtex
 @misc{schlottkelakemper2024securearithmetic,
-  title={{S}ecure{A}rithmetic.jl: {C}ryptographically secure arithmetic operations in {J}ulia using fully homomorphic encryption},
+  title={{S}ecure{A}rithmetic.jl: {S}ecure arithmetic operations in {J}ulia using fully homomorphic encryption},
   author={Schlottke-Lakemper, Michael},
   year={2024},
   howpublished={\url{https://github.com/sloede/SecureArithmetic.jl}}
