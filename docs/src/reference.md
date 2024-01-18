@@ -6,5 +6,4 @@ CurrentModule = SecureArithmetic
 
 ```@autodocs
 Modules = [SecureArithmetic]
-Private = false
 ```
