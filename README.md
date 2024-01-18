@@ -10,7 +10,7 @@
 SecureArithmetic.jl is a Julia package for performing cryptographically secure arithmetic
 operations using fully homomorphic encryption. It currently provides a backend for
 OpenFHE-secured computations using [OpenFHE.jl](https://github.com/sloede/OpenFHE.jl), and
-an unecrypted backend for fast verification of a computation pipeline.
+an unencrypted backend for fast verification of a computation pipeline.
 
 
 ## Getting started
