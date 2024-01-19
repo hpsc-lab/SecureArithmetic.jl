@@ -9,6 +9,10 @@ using SecureArithmetic
     @test_nowarn include("../examples/simple_real_numbers.jl")
 end
 
+@testset verbose=true showtiming=true "examples/simple_ckks_bootstrapping.jl" begin
+    @test_nowarn include("../examples/simple_ckks_bootstrapping.jl")
+end
+
 end # @testset "test_examples.jl"
 
 end # module

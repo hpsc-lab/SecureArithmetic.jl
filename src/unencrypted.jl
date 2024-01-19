@@ -8,6 +8,7 @@ end
 
 init_multiplication(context::SecureContext{<:Unencrypted}, private_key) = nothing
 init_rotation(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
+init_bootstrapping(context::SecureContext{<:Unencrypted}, private_key) = nothing
 
 function PlainVector(context::SecureContext{<:Unencrypted}, data::Vector{<:Real})
     plain_vector = PlainVector(data, context)
@@ -25,7 +26,11 @@ end
 function decrypt!(plain_vector, context::SecureContext{<:Unencrypted}, private_key,
                   secure_vector)
     plain_vector.plaintext .= secure_vector.ciphertext
+
+    plain_vector
 end
+
+bootstrap!(context::SecureContext{<:Unencrypted}, secure_vector) = secure_vector
 
 function decrypt(context::SecureContext{<:Unencrypted}, private_key, secure_vector)
     plain_vector = PlainVector(similar(secure_vector.ciphertext), context)

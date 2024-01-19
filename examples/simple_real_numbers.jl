@@ -84,6 +84,7 @@ context_openfhe = SecureContext(OpenFHEBackend(cc))
 ################################################################################
 println("="^80)
 println("Creating unencrypted context...")
+println()
 
 context_unencrypted = SecureContext(Unencrypted())
 
