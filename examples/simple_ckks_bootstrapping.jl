@@ -12,18 +12,17 @@ function simple_ckks_bootstrapping(context)
     init_bootstrapping!(context, private_key)
 
     x = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
-    encoded_length = length(x)
 
-    pv = PlainVector(context, x)
+    pv = PlainVector(x, context)
     println("Input: ", pv)
 
-    sv = encrypt(context, public_key, pv)
+    sv = encrypt(pv, public_key)
 
     # Perform the bootstrapping operation. The goal is to increase the number of levels
     # remaining for HE computation.
-    sv_after = bootstrap!(context, sv)
+    sv_after = bootstrap!(sv)
 
-    result = decrypt(context, private_key, sv)
+    result = decrypt(sv, private_key)
     println("Output after bootstrapping \n\t", result)
 end
 

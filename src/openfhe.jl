@@ -44,7 +44,7 @@ function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend}, private_k
     nothing
 end
 
-function PlainVector(context::SecureContext{<:OpenFHEBackend}, data::Vector{<:Real})
+function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
     plain_vector = PlainVector(plaintext, context)
@@ -52,15 +52,15 @@ function PlainVector(context::SecureContext{<:OpenFHEBackend}, data::Vector{<:Re
     plain_vector
 end
 
-function encrypt(context::SecureContext{<:OpenFHEBackend}, public_key, data::Vector{<:Real})
+function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:OpenFHEBackend})
     plain_vector = PlainVector(context, data)
     secure_vector = encrypt(context, public_key, plain_vector)
 
     secure_vector
 end
 
-function encrypt(context::SecureContext{<:OpenFHEBackend}, public_key,
-                 plain_vector::PlainVector)
+function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key)
+    context = plain_vector.context
     cc = get_crypto_context(context)
     ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_vector.plaintext)
     secure_vector = SecureVector(ciphertext, context)
@@ -68,29 +68,25 @@ function encrypt(context::SecureContext{<:OpenFHEBackend}, public_key,
     secure_vector
 end
 
-function decrypt!(plain_vector, context::SecureContext{<:OpenFHEBackend}, private_key,
-                  secure_vector)
-    cc = get_crypto_context(context)
+function decrypt!(plain_vector::PlainVector{<:OpenFHEBackend},
+                  secure_vector::SecureVector{<:OpenFHEBackend}, private_key)
+    cc = get_crypto_context(secure_vector)
     OpenFHE.Decrypt(cc, private_key.private_key, secure_vector.ciphertext,
                     plain_vector.plaintext)
 
     plain_vector
 end
 
-function decrypt(context::SecureContext{<:OpenFHEBackend}, private_key, secure_vector)
+function decrypt(secure_vector::SecureVector{<:OpenFHEBackend}, private_key)
+    context = secure_vector.context
     plain_vector = PlainVector(OpenFHE.Plaintext(), context)
 
-    decrypt!(plain_vector, context, private_key, secure_vector)
+    decrypt!(plain_vector, secure_vector, private_key)
 end
 
 
-function bootstrap!(context::SecureContext{<:OpenFHEBackend}, secure_vector)
-    cc = get_crypto_context(context)
-    OpenFHE.EvalBootstrap(cc, secure_vector.ciphertext)
-
-    secure_vector
-end
-function bootstrap!(context::SecureContext{<:OpenFHEBackend}, secure_vector)
+function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
+    context = secure_vector.context
     cc = get_crypto_context(context)
     OpenFHE.EvalBootstrap(cc, secure_vector.ciphertext)
 

@@ -10,33 +10,30 @@ init_multiplication!(context::SecureContext{<:Unencrypted}, private_key) = nothi
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
 init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key) = nothing
 
-function PlainVector(context::SecureContext{<:Unencrypted}, data::Vector{<:Real})
-    plain_vector = PlainVector(data, context)
-end
+# No constructor for `PlainVector` necessary since we can directly use the inner constructor
 
-function encrypt(context::SecureContext{<:Unencrypted}, public_key, data::Vector{<:Real})
+function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:Unencrypted})
     SecureVector(data, context)
 end
 
-function encrypt(context::SecureContext{<:Unencrypted}, public_key,
-                 plain_vector::PlainVector)
-    SecureVector(plain_vector.plaintext, context)
+function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key)
+    SecureVector(plain_vector.plaintext, plain_vector.context)
 end
 
-function decrypt!(plain_vector, context::SecureContext{<:Unencrypted}, private_key,
-                  secure_vector)
+function decrypt!(plain_vector::PlainVector{<:Unencrypted},
+                  secure_vector::SecureVector{<:Unencrypted}, private_key)
     plain_vector.plaintext .= secure_vector.ciphertext
 
     plain_vector
 end
 
-function decrypt(context::SecureContext{<:Unencrypted}, private_key, secure_vector)
-    plain_vector = PlainVector(similar(secure_vector.ciphertext), context)
+function decrypt(secure_vector::SecureVector{<:Unencrypted}, private_key)
+    plain_vector = PlainVector(similar(secure_vector.ciphertext), secure_vector.context)
 
-    decrypt!(plain_vector, context, private_key, secure_vector)
+    decrypt!(plain_vector, secure_vector, private_key)
 end
 
-bootstrap!(context::SecureContext{<:Unencrypted}, secure_vector) = secure_vector
+bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector
 
 function add(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
     SecureVector(sv1.ciphertext .+ sv2.ciphertext, sv1.context)
