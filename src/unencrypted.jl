@@ -30,13 +30,13 @@ function decrypt!(plain_vector, context::SecureContext{<:Unencrypted}, private_k
     plain_vector
 end
 
-bootstrap!(context::SecureContext{<:Unencrypted}, secure_vector) = secure_vector
-
 function decrypt(context::SecureContext{<:Unencrypted}, private_key, secure_vector)
     plain_vector = PlainVector(similar(secure_vector.ciphertext), context)
 
     decrypt!(plain_vector, context, private_key, secure_vector)
 end
+
+bootstrap!(context::SecureContext{<:Unencrypted}, secure_vector) = secure_vector
 
 function add(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
     SecureVector(sv1.ciphertext .+ sv2.ciphertext, sv1.context)
