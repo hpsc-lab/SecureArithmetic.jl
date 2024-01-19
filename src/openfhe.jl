@@ -35,6 +35,15 @@ function init_rotation(context::SecureContext{<:OpenFHEBackend}, private_key, sh
     nothing
 end
 
+function init_bootstrapping(context::SecureContext{<:OpenFHEBackend}, private_key)
+    cc = get_crypto_context(context)
+    ring_dimension = OpenFHE.GetRingDimension(cc)
+    num_slots = div(ring_dimension,  2)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, num_slots)
+
+    nothing
+end
+
 function PlainVector(context::SecureContext{<:OpenFHEBackend}, data::Vector{<:Real})
     cc = get_crypto_context(context)
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
@@ -72,6 +81,20 @@ function decrypt(context::SecureContext{<:OpenFHEBackend}, private_key, secure_v
     plain_vector = PlainVector(OpenFHE.Plaintext(), context)
 
     decrypt!(plain_vector, context, private_key, secure_vector)
+end
+
+
+function bootstrap!(context::SecureContext{<:OpenFHEBackend}, secure_vector)
+    cc = get_crypto_context(context)
+    OpenFHE.EvalBootstrap(cc, secure_vector.ciphertext)
+
+    secure_vector
+end
+function bootstrap!(context::SecureContext{<:OpenFHEBackend}, secure_vector)
+    cc = get_crypto_context(context)
+    OpenFHE.EvalBootstrap(cc, secure_vector.ciphertext)
+
+    secure_vector
 end
 
 function add(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
