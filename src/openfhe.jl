@@ -21,21 +21,21 @@ function generate_keys(context::SecureContext{<:OpenFHEBackend})
     public_key, private_key
 end
 
-function init_multiplication(context::SecureContext{<:OpenFHEBackend}, private_key)
+function init_multiplication!(context::SecureContext{<:OpenFHEBackend}, private_key)
     cc = get_crypto_context(context)
     OpenFHE.EvalMultKeyGen(cc, private_key.private_key)
 
     nothing
 end
 
-function init_rotation(context::SecureContext{<:OpenFHEBackend}, private_key, shifts)
+function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, shifts)
     cc = get_crypto_context(context)
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, shifts)
 
     nothing
 end
 
-function init_bootstrapping(context::SecureContext{<:OpenFHEBackend}, private_key)
+function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend}, private_key)
     cc = get_crypto_context(context)
     ring_dimension = OpenFHE.GetRingDimension(cc)
     num_slots = div(ring_dimension,  2)

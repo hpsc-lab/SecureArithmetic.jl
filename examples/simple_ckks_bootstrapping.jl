@@ -8,8 +8,8 @@ using OpenFHE
 function simple_ckks_bootstrapping(context)
     public_key, private_key = generate_keys(context)
 
-    init_multiplication(context, private_key)
-    init_bootstrapping(context, private_key)
+    init_multiplication!(context, private_key)
+    init_bootstrapping!(context, private_key)
 
     x = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
     encoded_length = length(x)
