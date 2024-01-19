@@ -6,9 +6,9 @@ function generate_keys(context::SecureContext{<:Unencrypted})
     PublicKey(context, nothing), PrivateKey(context, nothing)
 end
 
-init_multiplication(context::SecureContext{<:Unencrypted}, private_key) = nothing
-init_rotation(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
-init_bootstrapping(context::SecureContext{<:Unencrypted}, private_key) = nothing
+init_multiplication!(context::SecureContext{<:Unencrypted}, private_key) = nothing
+init_rotation!(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
+init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key) = nothing
 
 function PlainVector(context::SecureContext{<:Unencrypted}, data::Vector{<:Real})
     plain_vector = PlainVector(data, context)

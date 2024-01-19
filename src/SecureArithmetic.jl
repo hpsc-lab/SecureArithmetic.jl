@@ -9,7 +9,7 @@ export SecureContext, SecureVector, PlainVector
 export Unencrypted, OpenFHEBackend
 
 # Crypto operations
-export generate_keys, init_multiplication, init_rotation, init_bootstrapping
+export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 include("types.jl")
