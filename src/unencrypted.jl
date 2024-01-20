@@ -39,8 +39,24 @@ function add(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
     SecureVector(sv1.ciphertext .+ sv2.ciphertext, sv1.context)
 end
 
+function add(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
+    SecureVector(sv.ciphertext .+ pv.plaintext, sv.context)
+end
+
 function subtract(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
     SecureVector(sv1.ciphertext .- sv2.ciphertext, sv1.context)
+end
+
+function subtract(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
+    SecureVector(sv.ciphertext .- pv.plaintext, sv.context)
+end
+
+function subtract(pv::PlainVector{<:Unencrypted}, sv::SecureVector{<:Unencrypted})
+    SecureVector(pv.plaintext .- sv.ciphertext, sv.context)
+end
+
+function negate(sv::SecureVector{<:Unencrypted})
+    SecureVector(-sv.ciphertext, sv.context)
 end
 
 function multiply(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
