@@ -119,7 +119,7 @@ end
 
 function subtract(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSubtract(cc, sv.ciphertext, pv.plaintext)
+    ciphertext = OpenFHE.EvalSub(cc, sv.ciphertext, pv.plaintext)
     secure_vector = SecureVector(ciphertext, sv.context)
 
     secure_vector
@@ -127,7 +127,7 @@ end
 
 function subtract(pv::PlainVector{<:OpenFHEBackend}, sv::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSubtract(cc, pv.plaintext, sv.ciphertext)
+    ciphertext = OpenFHE.EvalSub(cc, pv.plaintext, sv.ciphertext)
     secure_vector = SecureVector(ciphertext, sv.context)
 
     secure_vector
