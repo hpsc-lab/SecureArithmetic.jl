@@ -93,6 +93,11 @@ function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
     secure_vector
 end
 
+
+############################################################################################
+# Arithmetic operations
+############################################################################################
+
 function add(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv1)
     ciphertext = OpenFHE.EvalAdd(cc, sv1.ciphertext, sv2.ciphertext)
@@ -104,6 +109,14 @@ end
 function add(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalAdd(cc, sv.ciphertext, pv.plaintext)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
+function add(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalAdd(cc, sv.ciphertext, scalar)
     secure_vector = SecureVector(ciphertext, sv.context)
 
     secure_vector
@@ -128,6 +141,22 @@ end
 function subtract(pv::PlainVector{<:OpenFHEBackend}, sv::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalSub(cc, pv.plaintext, sv.ciphertext)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
+function subtract(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalSub(cc, sv.ciphertext, scalar)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
+function subtract(scalar::Real, sv::SecureVector{<:OpenFHEBackend})
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalSub(cc, scalar, sv.ciphertext)
     secure_vector = SecureVector(ciphertext, sv.context)
 
     secure_vector
