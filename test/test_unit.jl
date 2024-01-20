@@ -2,6 +2,7 @@ module TestUnit
 
 using Test
 using SecureArithmetic
+using OpenFHE
 
 @testset verbose=true showtiming=true "test_unit.jl" begin
 
