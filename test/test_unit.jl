@@ -29,7 +29,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                 (; name = "Unencrypted", BackendT = Unencrypted, context = context_unencrypted))
     name, context = backend
 
-    @testset verbose=true showtiming=true name begin
+    @testset verbose=true showtiming=true "$name" begin
         @testset verbose=true showtiming=true "generate_keys" begin
             @test_nowarn generate_keys(context)
         end
