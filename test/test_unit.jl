@@ -27,7 +27,7 @@ context_unencrypted = SecureContext(Unencrypted())
 
 for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = context_openfhe),
                 (; name = "Unencrypted", BackendT = Unencrypted, context = context_unencrypted))
-    name, context = backend
+    (; name, BackendT, context) = backend
 
     @testset verbose=true showtiming=true "$name" begin
         @testset verbose=true showtiming=true "generate_keys" begin
