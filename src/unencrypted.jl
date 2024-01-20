@@ -35,12 +35,21 @@ end
 
 bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector
 
+
+############################################################################################
+# Arithmetic operations
+############################################################################################
+
 function add(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
     SecureVector(sv1.ciphertext .+ sv2.ciphertext, sv1.context)
 end
 
 function add(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
     SecureVector(sv.ciphertext .+ pv.plaintext, sv.context)
+end
+
+function add(sv::SecureVector{<:Unencrypted}, scalar::Real)
+    SecureVector(sv.ciphertext .+ scalar, sv.context)
 end
 
 function subtract(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
@@ -53,6 +62,14 @@ end
 
 function subtract(pv::PlainVector{<:Unencrypted}, sv::SecureVector{<:Unencrypted})
     SecureVector(pv.plaintext .- sv.ciphertext, sv.context)
+end
+
+function subtract(sv::SecureVector{<:Unencrypted}, scalar::Real)
+    SecureVector(sv.ciphertext .- scalar, sv.context)
+end
+
+function subtract(scalar::Real, sv::SecureVector{<:Unencrypted})
+    SecureVector(scalar .- sv.ciphertext, sv.context)
 end
 
 function negate(sv::SecureVector{<:Unencrypted})

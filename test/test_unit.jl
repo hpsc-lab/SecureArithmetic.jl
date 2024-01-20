@@ -64,12 +64,16 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test sv1 + sv2 isa SecureVector
             @test sv1 + pv1 isa SecureVector
             @test pv1 + sv1 isa SecureVector
+            @test sv1 + 3 isa SecureVector
+            @test 4 + sv1 isa SecureVector
         end
 
         @testset verbose=true showtiming=true "subtract" begin
             @test sv1 - sv2 isa SecureVector
             @test sv1 - pv1 isa SecureVector
             @test pv1 - sv1 isa SecureVector
+            @test sv1 - 3 isa SecureVector
+            @test 4 - sv1 isa SecureVector
         end
 
         @testset verbose=true showtiming=true "multiply" begin
