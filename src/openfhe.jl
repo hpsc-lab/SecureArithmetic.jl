@@ -101,10 +101,42 @@ function add(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBac
     secure_vector
 end
 
+function add(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalAdd(cc, sv.ciphertext, pv.plaintext)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
 function subtract(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv1)
     ciphertext = OpenFHE.EvalSub(cc, sv1.ciphertext, sv2.ciphertext)
     secure_vector = SecureVector(ciphertext, sv1.context)
+
+    secure_vector
+end
+
+function subtract(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalSub(cc, sv.ciphertext, pv.plaintext)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
+function subtract(pv::PlainVector{<:OpenFHEBackend}, sv::SecureVector{<:OpenFHEBackend})
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalSub(cc, pv.plaintext, sv.ciphertext)
+    secure_vector = SecureVector(ciphertext, sv.context)
+
+    secure_vector
+end
+
+function negate(sv::SecureVector{<:OpenFHEBackend})
+    cc = get_crypto_context(sv)
+    ciphertext = OpenFHE.EvalNegate(cc, sv.ciphertext)
+    secure_vector = SecureVector(ciphertext, sv.context)
 
     secure_vector
 end
