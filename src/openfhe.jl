@@ -47,14 +47,14 @@ end
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
-    plain_vector = PlainVector(plaintext, context)
+    plain_vector = PlainVector(plaintext, length(data), context)
 
     plain_vector
 end
 
 function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:OpenFHEBackend})
-    plain_vector = PlainVector(context, data)
-    secure_vector = encrypt(context, public_key, plain_vector)
+    plain_vector = PlainVector(data, length(data), context)
+    secure_vector = encrypt(plain_vector, public_key)
 
     secure_vector
 end
@@ -63,7 +63,7 @@ function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key)
     context = plain_vector.context
     cc = get_crypto_context(context)
     ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_vector.data)
-    secure_vector = SecureVector(ciphertext, context)
+    secure_vector = SecureVector(ciphertext, length(plain_vector), context)
 
     secure_vector
 end
@@ -79,7 +79,7 @@ end
 
 function decrypt(secure_vector::SecureVector{<:OpenFHEBackend}, private_key)
     context = secure_vector.context
-    plain_vector = PlainVector(OpenFHE.Plaintext(), context)
+    plain_vector = PlainVector(OpenFHE.Plaintext(), length(secure_vector), context)
 
     decrypt!(plain_vector, secure_vector, private_key)
 end
@@ -101,7 +101,7 @@ end
 function add(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv1)
     ciphertext = OpenFHE.EvalAdd(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, sv1.context)
+    secure_vector = SecureVector(ciphertext, length(sv1), sv1.context)
 
     secure_vector
 end
@@ -109,7 +109,7 @@ end
 function add(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalAdd(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -117,7 +117,7 @@ end
 function add(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalAdd(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -125,7 +125,7 @@ end
 function subtract(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv1)
     ciphertext = OpenFHE.EvalSub(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, sv1.context)
+    secure_vector = SecureVector(ciphertext, length(sv1), sv1.context)
 
     secure_vector
 end
@@ -133,7 +133,7 @@ end
 function subtract(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalSub(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -141,7 +141,7 @@ end
 function subtract(pv::PlainVector{<:OpenFHEBackend}, sv::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalSub(cc, pv.data, sv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -149,7 +149,7 @@ end
 function subtract(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalSub(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -157,7 +157,7 @@ end
 function subtract(scalar::Real, sv::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalSub(cc, scalar, sv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -165,7 +165,7 @@ end
 function negate(sv::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalNegate(cc, sv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -173,7 +173,7 @@ end
 function multiply(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv1)
     ciphertext = OpenFHE.EvalMult(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, sv1.context)
+    secure_vector = SecureVector(ciphertext, length(sv1), sv1.context)
 
     secure_vector
 end
@@ -181,7 +181,7 @@ end
 function multiply(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalMult(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -189,7 +189,7 @@ end
 function multiply(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sv)
     ciphertext = OpenFHE.EvalMult(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end
@@ -198,7 +198,7 @@ function rotate(sv::SecureVector{<:OpenFHEBackend}, shift)
     cc = get_crypto_context(sv)
     # We use `-shift` to match Julia's usual `circshift` direction
     ciphertext = OpenFHE.EvalRotate(cc, sv.data, -shift)
-    secure_vector = SecureVector(ciphertext, sv.context)
+    secure_vector = SecureVector(ciphertext, length(sv), sv.context)
 
     secure_vector
 end

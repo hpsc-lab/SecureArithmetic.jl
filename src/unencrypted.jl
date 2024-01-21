@@ -10,14 +10,16 @@ init_multiplication!(context::SecureContext{<:Unencrypted}, private_key) = nothi
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
 init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key) = nothing
 
-# No constructor for `PlainVector` necessary since we can directly use the inner constructor
+function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
+    PlainVector(data, length(data), context)
+end
 
 function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:Unencrypted})
-    SecureVector(data, context)
+    SecureVector(data, length(data), context)
 end
 
 function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key)
-    SecureVector(plain_vector.data, plain_vector.context)
+    SecureVector(plain_vector.data, length(plain_vector), plain_vector.context)
 end
 
 function decrypt!(plain_vector::PlainVector{<:Unencrypted},
@@ -28,7 +30,7 @@ function decrypt!(plain_vector::PlainVector{<:Unencrypted},
 end
 
 function decrypt(secure_vector::SecureVector{<:Unencrypted}, private_key)
-    plain_vector = PlainVector(similar(secure_vector.data), secure_vector.context)
+    plain_vector = PlainVector(similar(secure_vector.data), length(secure_vector), secure_vector.context)
 
     decrypt!(plain_vector, secure_vector, private_key)
 end
@@ -41,53 +43,53 @@ bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector
 ############################################################################################
 
 function add(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
-    SecureVector(sv1.data .+ sv2.data, sv1.context)
+    SecureVector(sv1.data .+ sv2.data, length(sv1), sv1.context)
 end
 
 function add(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
-    SecureVector(sv.data .+ pv.data, sv.context)
+    SecureVector(sv.data .+ pv.data, length(sv), sv.context)
 end
 
 function add(sv::SecureVector{<:Unencrypted}, scalar::Real)
-    SecureVector(sv.data .+ scalar, sv.context)
+    SecureVector(sv.data .+ scalar, length(sv), sv.context)
 end
 
 function subtract(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
-    SecureVector(sv1.data .- sv2.data, sv1.context)
+    SecureVector(sv1.data .- sv2.data, length(sv1), sv1.context)
 end
 
 function subtract(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
-    SecureVector(sv.data .- pv.data, sv.context)
+    SecureVector(sv.data .- pv.data, length(sv), sv.context)
 end
 
 function subtract(pv::PlainVector{<:Unencrypted}, sv::SecureVector{<:Unencrypted})
-    SecureVector(pv.data .- sv.data, sv.context)
+    SecureVector(pv.data .- sv.data, length(sv), sv.context)
 end
 
 function subtract(sv::SecureVector{<:Unencrypted}, scalar::Real)
-    SecureVector(sv.data .- scalar, sv.context)
+    SecureVector(sv.data .- scalar, length(sv), sv.context)
 end
 
 function subtract(scalar::Real, sv::SecureVector{<:Unencrypted})
-    SecureVector(scalar .- sv.data, sv.context)
+    SecureVector(scalar .- sv.data, length(sv), sv.context)
 end
 
 function negate(sv::SecureVector{<:Unencrypted})
-    SecureVector(-sv.data, sv.context)
+    SecureVector(-sv.data, length(sv), sv.context)
 end
 
 function multiply(sv1::SecureVector{<:Unencrypted}, sv2::SecureVector{<:Unencrypted})
-    SecureVector(sv1.data .* sv2.data, sv1.context)
+    SecureVector(sv1.data .* sv2.data, length(sv1), sv1.context)
 end
 
 function multiply(sv::SecureVector{<:Unencrypted}, pv::PlainVector{<:Unencrypted})
-    SecureVector(sv.data .* pv.data, sv.context)
+    SecureVector(sv.data .* pv.data, length(sv), sv.context)
 end
 
 function multiply(sv::SecureVector{<:Unencrypted}, scalar::Real)
-    SecureVector(sv.data .* scalar, sv.context)
+    SecureVector(sv.data .* scalar, length(sv), sv.context)
 end
 
 function rotate(sv::SecureVector{<:Unencrypted}, shift)
-    SecureVector(circshift(sv.data, shift), sv.context)
+    SecureVector(circshift(sv.data, shift), length(sv), sv.context)
 end

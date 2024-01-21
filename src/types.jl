@@ -6,21 +6,27 @@ end
 
 struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
+    length::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureVector(data, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, context)
+    function SecureVector(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, length, context)
     end
 end
+
+Base.length(v::SecureVector) = v.length
 
 struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
+    length::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainVector(data, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, context)
+    function PlainVector(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, length, context)
     end
 end
+
+Base.length(v::PlainVector) = v.length
 
 Base.print(io::IO, plain_vector::PlainVector) = print(io, plain_vector.data)
 
