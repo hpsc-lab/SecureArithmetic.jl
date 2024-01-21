@@ -5,11 +5,9 @@ end
 function get_crypto_context(context::SecureContext{<:OpenFHEBackend})
     context.backend.crypto_context
 end
-function get_crypto_context(secure_vector::SecureVector{<:OpenFHEBackend})
-    get_crypto_context(secure_vector.context)
-end
-function get_crypto_context(plain_vector::PlainVector{<:OpenFHEBackend})
-    get_crypto_context(plain_vector.context)
+function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
+                                     PlainVector{<:OpenFHEBackend}})
+    get_crypto_context(v.context)
 end
 
 function generate_keys(context::SecureContext{<:OpenFHEBackend})
@@ -21,21 +19,24 @@ function generate_keys(context::SecureContext{<:OpenFHEBackend})
     public_key, private_key
 end
 
-function init_multiplication!(context::SecureContext{<:OpenFHEBackend}, private_key)
+function init_multiplication!(context::SecureContext{<:OpenFHEBackend},
+                              private_key::PrivateKey)
     cc = get_crypto_context(context)
     OpenFHE.EvalMultKeyGen(cc, private_key.private_key)
 
     nothing
 end
 
-function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, shifts)
+function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                        shifts)
     cc = get_crypto_context(context)
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, shifts)
 
     nothing
 end
 
-function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend}, private_key)
+function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
+                             private_key::PrivateKey)
     cc = get_crypto_context(context)
     ring_dimension = OpenFHE.GetRingDimension(cc)
     num_slots = div(ring_dimension,  2)
@@ -53,13 +54,13 @@ function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBacke
 end
 
 function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:OpenFHEBackend})
-    plain_vector = PlainVector(data, length(data), context)
+    plain_vector = PlainVector(data, context)
     secure_vector = encrypt(plain_vector, public_key)
 
     secure_vector
 end
 
-function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key)
+function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key::PublicKey)
     context = plain_vector.context
     cc = get_crypto_context(context)
     ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_vector.data)
@@ -69,7 +70,7 @@ function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key)
 end
 
 function decrypt!(plain_vector::PlainVector{<:OpenFHEBackend},
-                  secure_vector::SecureVector{<:OpenFHEBackend}, private_key)
+                  secure_vector::SecureVector{<:OpenFHEBackend}, private_key::PrivateKey)
     cc = get_crypto_context(secure_vector)
     OpenFHE.Decrypt(cc, private_key.private_key, secure_vector.data,
                     plain_vector.data)
@@ -77,7 +78,7 @@ function decrypt!(plain_vector::PlainVector{<:OpenFHEBackend},
     plain_vector
 end
 
-function decrypt(secure_vector::SecureVector{<:OpenFHEBackend}, private_key)
+function decrypt(secure_vector::SecureVector{<:OpenFHEBackend}, private_key::PrivateKey)
     context = secure_vector.context
     plain_vector = PlainVector(OpenFHE.Plaintext(), length(secure_vector), context)
 

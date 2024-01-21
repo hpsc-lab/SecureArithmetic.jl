@@ -6,30 +6,31 @@ function generate_keys(context::SecureContext{<:Unencrypted})
     PublicKey(context, nothing), PrivateKey(context, nothing)
 end
 
-init_multiplication!(context::SecureContext{<:Unencrypted}, private_key) = nothing
-init_rotation!(context::SecureContext{<:Unencrypted}, private_key, shifts) = nothing
-init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key) = nothing
+init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
+init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
+init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
     PlainVector(data, length(data), context)
 end
 
-function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:Unencrypted})
+function encrypt(data::Vector{<:Real}, public_key::PublicKey,
+                 context::SecureContext{<:Unencrypted})
     SecureVector(data, length(data), context)
 end
 
-function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key)
+function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key::PublicKey)
     SecureVector(plain_vector.data, length(plain_vector), plain_vector.context)
 end
 
 function decrypt!(plain_vector::PlainVector{<:Unencrypted},
-                  secure_vector::SecureVector{<:Unencrypted}, private_key)
+                  secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
     plain_vector.data .= secure_vector.data
 
     plain_vector
 end
 
-function decrypt(secure_vector::SecureVector{<:Unencrypted}, private_key)
+function decrypt(secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
     plain_vector = PlainVector(similar(secure_vector.data), length(secure_vector), secure_vector.context)
 
     decrypt!(plain_vector, secure_vector, private_key)

@@ -55,6 +55,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "encrypt" begin
             @test encrypt(pv1, public_key) isa SecureVector
+            @test encrypt([1.0, 2.0, 3.0], public_key, context) isa SecureVector
         end
 
         sv1 = encrypt(pv1, public_key)
@@ -86,6 +87,23 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "negate" begin
             @test -sv2 isa SecureVector
+        end
+
+        @testset verbose=true showtiming=true "show" begin
+            @test_nowarn show(context)
+            println()
+
+            @test_nowarn show(pv1)
+            println()
+
+            @test_nowarn show(sv1)
+            println()
+
+            @test_nowarn show(public_key)
+            println()
+
+            @test_nowarn show(private_key)
+            println()
         end
     end
 end
