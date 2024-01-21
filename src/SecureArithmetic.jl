@@ -5,6 +5,9 @@ using OpenFHE: OpenFHE
 # Basic types
 export SecureContext, SecureVector, PlainVector
 
+# Keys
+export PrivateKey, PublicKey
+
 # Backends
 export Unencrypted, OpenFHEBackend
 
