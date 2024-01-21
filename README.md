@@ -6,6 +6,7 @@
 [![Coveralls](https://coveralls.io/repos/github/sloede/SecureArithmetic.jl/badge.svg)](https://coveralls.io/github/sloede/SecureArithmetic.jl)
 [![Codecov](https://codecov.io/gh/sloede/SecureArithmetic.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sloede/SecureArithmetic.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/license/mit/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10544790.svg)](https://doi.org/10.5281/zenodo.10544790)
 
 SecureArithmetic.jl is a Julia package for performing cryptographically secure arithmetic
 operations using fully homomorphic encryption. It currently provides a backend for
@@ -93,7 +94,8 @@ If you use SecureArithmetic.jl in your own research, please cite this repository
   title={{S}ecure{A}rithmetic.jl: {S}ecure arithmetic operations in {J}ulia using fully homomorphic encryption},
   author={Schlottke-Lakemper, Michael},
   year={2024},
-  howpublished={\url{https://github.com/sloede/SecureArithmetic.jl}}
+  howpublished={\url{https://github.com/sloede/SecureArithmetic.jl}},
+  doi={10.5281/zenodo.10544790}
 }
 ```
 
