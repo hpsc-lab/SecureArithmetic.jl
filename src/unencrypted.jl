@@ -14,6 +14,11 @@ function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted}
     PlainVector(data, length(data), context)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", v::PlainVector{<:Unencrypted})
+    print(io, v.length, "-element PlainVector{Unencrypted}:\n")
+    Base.print_matrix(io, v.data[1:v.length])
+end
+
 function encrypt(data::Vector{<:Real}, public_key::PublicKey,
                  context::SecureContext{<:Unencrypted})
     SecureVector(data, length(data), context)

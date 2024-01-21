@@ -19,6 +19,7 @@ struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
 end
 
 Base.length(v::SecureVector) = v.length
+
 function Base.show(io::IO, v::SecureVector)
     print("SecureVector{", backend_name(v), "}(data=<encrypted>, length=$(v.length))")
 end
@@ -34,11 +35,10 @@ struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
 end
 
 Base.length(v::PlainVector) = v.length
-function Base.show(io::IO, v::PlainVector{CryptoBackendT}) where CryptoBackendT
-    print("PlainVector{", backend_name(v), "}(data=<plain>, length=$(v.length))")
-end
 
-Base.print(io::IO, plain_vector::PlainVector) = print(io, plain_vector.data)
+function Base.show(io::IO, v::PlainVector)
+    print(io, "PlainVector{", backend_name(v), "}(data=<encoded>, length=$(v.length))")
+end
 
 struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     private_key::KeyT
@@ -49,7 +49,7 @@ struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     end
 end
 
-function Base.show(io::IO, key::PrivateKey{CryptoBackendT}) where CryptoBackendT
+function Base.show(io::IO, key::PrivateKey)
     print("PrivateKey{", backend_name(key), "}()")
 end
 
@@ -62,7 +62,7 @@ struct PublicKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     end
 end
 
-function Base.show(io::IO, key::PublicKey{CryptoBackendT}) where CryptoBackendT
+function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
@@ -72,6 +72,6 @@ end
 # Note: prefixed by `__` since it is really, really dirty black magic internals we use here!
 __parameterless_type(T) = Base.typename(T).wrapper
 
-# Convenience method for getting the human-readable backend name
+# Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
                       PublicKey{T}}) where T = string(__parameterless_type(T))
