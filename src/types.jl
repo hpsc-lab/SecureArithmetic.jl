@@ -4,25 +4,25 @@ struct SecureContext{CryptoBackendT <: AbstractCryptoBackend}
     backend::CryptoBackendT
 end
 
-struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, CiphertextT}
-    ciphertext::CiphertextT
+struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::DataT
     context::SecureContext{CryptoBackendT}
 
-    function SecureVector(ciphertext, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(ciphertext)}(ciphertext, context)
+    function SecureVector(data, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, context)
     end
 end
 
-struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, PlaintextT}
-    plaintext::PlaintextT
+struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::DataT
     context::SecureContext{CryptoBackendT}
 
-    function PlainVector(plaintext, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(plaintext)}(plaintext, context)
+    function PlainVector(data, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, context)
     end
 end
 
-Base.print(io::IO, plain_vector::PlainVector) = print(io, plain_vector.plaintext)
+Base.print(io::IO, plain_vector::PlainVector) = print(io, plain_vector.data)
 
 struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     private_key::KeyT
