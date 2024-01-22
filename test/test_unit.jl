@@ -90,19 +90,22 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         end
 
         @testset verbose=true showtiming=true "show" begin
-            @test_nowarn show(context)
+            @test_nowarn show(stdout, context)
             println()
 
-            @test_nowarn show(pv1)
+            @test_nowarn show(stdout, pv1)
             println()
 
-            @test_nowarn show(sv1)
+            @test_nowarn show(stdout, MIME"text/plain"(), pv1)
             println()
 
-            @test_nowarn show(public_key)
+            @test_nowarn show(stdout, sv1)
             println()
 
-            @test_nowarn show(private_key)
+            @test_nowarn show(stdout, public_key)
+            println()
+
+            @test_nowarn show(stdout, private_key)
             println()
         end
     end

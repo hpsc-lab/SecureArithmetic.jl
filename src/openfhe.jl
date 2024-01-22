@@ -53,6 +53,11 @@ function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBacke
     plain_vector
 end
 
+function Base.show(io::IO, ::MIME"text/plain", v::PlainVector{<:OpenFHEBackend})
+    print(io, v.length, "-element PlainVector{OpenFHEBackend}:\n")
+    Base.print_matrix(io, OpenFHE.GetRealPackedValue(v.data))
+end
+
 function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:OpenFHEBackend})
     plain_vector = PlainVector(data, context)
     secure_vector = encrypt(plain_vector, public_key)

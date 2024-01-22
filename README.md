@@ -23,10 +23,10 @@ operating system](https://julialang.org/downloads/platform/).
 and later on Linux and macOS platforms, and with Julia v1.9 or later on Windows platforms.
 
 ### Installation
-Since SecureArithmetic.jl is not yet a registered Julia package, you can install it by
-executing the following commands in the Julia REPL:
+Since SecureArithmetic.jl  is a registered Julia package, you can install it by executing
+the following commands in the Julia REPL:
 ```julia
-julia> import Pkg; Pkg.add("https://github.com/sloede/SecureArithmetic.jl")
+julia> import Pkg; Pkg.add("SecureArithmetic")
 ```
 If you plan on running the examples in the
 [`examples`](https://github.com/sloede/SecureArithmetic.jl/tree/main/examples) directory,
