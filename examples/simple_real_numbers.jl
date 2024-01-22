@@ -93,6 +93,7 @@ context_unencrypted = SecureContext(Unencrypted())
 println("="^80)
 println("simple_real_numbers with an OpenFHE context")
 simple_real_numbers(context_openfhe)
+println()
 
 
 ################################################################################

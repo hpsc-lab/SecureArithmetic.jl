@@ -36,10 +36,6 @@ end
 
 Base.length(v::PlainVector) = v.length
 
-function Base.show(io::IO, v::PlainVector)
-    print(io, "PlainVector{", backend_name(v), "}(data=<encoded>, length=$(v.length))")
-end
-
 struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     private_key::KeyT
     context::SecureContext{CryptoBackendT}
