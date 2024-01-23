@@ -56,7 +56,7 @@ function decrypt_impl(secure_vector::SecureVector{<:Unencrypted}, private_key::P
     plain_vector = PlainVector(similar(secure_vector.data), length(secure_vector),
                                capacity(secure_vector), secure_vector.context)
 
-    decrypt_impl!(plain_vector, secure_vector, private_key)
+    decrypt!(plain_vector, secure_vector, private_key)
 end
 
 bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector

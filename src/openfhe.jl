@@ -112,7 +112,7 @@ function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
     plain_vector = PlainVector(OpenFHE.Plaintext(), length(secure_vector),
                                capacity(secure_vector), context)
 
-    decrypt_impl!(plain_vector, secure_vector, private_key)
+    decrypt!(plain_vector, secure_vector, private_key)
 end
 
 
