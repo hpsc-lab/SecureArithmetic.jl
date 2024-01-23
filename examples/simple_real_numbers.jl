@@ -5,7 +5,7 @@ function simple_real_numbers(context)
     public_key, private_key = generate_keys(context)
 
     init_multiplication!(context, private_key)
-    init_rotation!(context, private_key, [1, -2])
+    init_rotation!(context, private_key, [-1, 2])
 
 
     x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -93,6 +93,7 @@ context_unencrypted = SecureContext(Unencrypted())
 println("="^80)
 println("simple_real_numbers with an OpenFHE context")
 simple_real_numbers(context_openfhe)
+println()
 
 
 ################################################################################

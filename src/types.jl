@@ -8,37 +8,67 @@ function Base.show(io::IO, v::SecureContext)
     print("SecureContext{", backend_name(v), "}()")
 end
 
+"""
+    SecureVector
+
+Holds encrypted data for arithmetic operations. Can be converted to a `PlainVector` using
+[`decrypt`](@ref).
+
+See also: [`PlainVector`](@ref), [`decrypt`](@ref)
+"""
 struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     length::Int
+    capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureVector(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, length, context)
+    function SecureVector(data, length, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, length, capacity, context)
     end
 end
-
-Base.length(v::SecureVector) = v.length
 
 function Base.show(io::IO, v::SecureVector)
     print("SecureVector{", backend_name(v), "}(data=<encrypted>, length=$(v.length))")
 end
 
+"""
+    PlainVector
+
+Holds encoded - but not encrypted - data for arithmetic operations. Can be converted to a
+`SecureVector` using [`encrypt`](@ref).
+
+See also: [`SecureVector`](@ref), [`encrypt`](@ref)
+"""
 struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     length::Int
+    capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainVector(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, length, context)
+    function PlainVector(data, length, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, length, capacity, context)
     end
 end
 
-Base.length(v::PlainVector) = v.length
+"""
+    length(v::Union{PlainVector, SecureVector})
 
-function Base.show(io::IO, v::PlainVector)
-    print(io, "PlainVector{", backend_name(v), "}(data=<encoded>, length=$(v.length))")
-end
+Return the current length of `v`, i.e., the number of container elements in use.
+Note that this might be less than its maximum [`capacity`](@ref).
+
+See also: [`capacity`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
+"""
+Base.length(v::Union{PlainVector, SecureVector}) = v.length
+
+"""
+    capacity(v::Union{PlainVector, SecureVector})
+
+Return the current capacity of `v`, i.e., the maximum number of elements the container may
+hold.. Note that this might be more than its current [`length`](@ref).
+
+See also: [`length`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
+"""
+capacity(v::Union{PlainVector, SecureVector}) = v.capacity
 
 struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     private_key::KeyT
