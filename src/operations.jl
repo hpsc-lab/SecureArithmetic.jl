@@ -38,7 +38,7 @@ end
 """
     decrypt(secure_vector::SecureVector, private_key::PrivateKey)
 
-Decrypt `secure_vector` using the `private_key` and retrun the resulting `PlainVector`.
+Decrypt `secure_vector` using the `private_key` and return the resulting `PlainVector`.
 
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`decrypt!`](@ref)
 """
