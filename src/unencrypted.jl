@@ -31,10 +31,6 @@ function level(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypted}}
     0
 end
 
-function capacity(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypted}})
-    length(v.data)
-end
-
 function encrypt_impl(data::Vector{<:Real}, public_key::PublicKey,
                       context::SecureContext{<:Unencrypted})
     SecureVector(data, length(data), length(data), context)

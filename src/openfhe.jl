@@ -74,10 +74,6 @@ function level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBac
     Int(OpenFHE.GetLevel(v.data))
 end
 
-function capacity(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
-    Int(OpenFHE.GetSlots(v.data))
-end
-
 function encrypt_impl(data::Vector{<:Real}, public_key::PublicKey,
                       context::SecureContext{<:OpenFHEBackend})
     plain_vector = PlainVector(data, context)
