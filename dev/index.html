@@ -8,27 +8,20 @@ CKKS scheme is using ring dimension 16384
 
 ================================================================================
 Creating unencrypted context...
+
 ================================================================================
 simple_real_numbers with an OpenFHE context
-Input x1: (0.25, 0.5, 0.75, 1, 2, 3, 4, 5,  ... ); Estimated precision: 50 bits
-
-Input x2: (5, 4, 3, 2, 1, 0.75, 0.5, 0.25,  ... ); Estimated precision: 50 bits
-
+Input x1: [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
+Input x2: [5.0, 4.0, 3.0, 2.0, 1.0, 0.75, 0.5, 0.25]
 
 Results of homomorphic computations:
-x1 = (0.25, 0.5, 0.75, 1, 2, 3, 4, 5,  ... ); Estimated precision: 43 bits
-
-x1 + x2 = (5.25, 4.5, 3.75, 3, 3, 3.75, 4.5, 5.25,  ... ); Estimated precision: 43 bits
-
-x1 - x2 = (-4.75, -3.5, -2.25, -1, 1, 2.25, 3.5, 4.75,  ... ); Estimated precision: 43 bits
-
-4 * x1 = (1, 2, 3, 4, 8, 12, 16, 20,  ... ); Estimated precision: 41 bits
-
-x1 * x2 = (1.25, 2, 2.25, 2, 2, 2.25, 2, 1.25,  ... ); Estimated precision: 41 bits
-
-x1 shifted circularly by -1 = (0.5, 0.75, 1, 2, 3, 4, 5, 0.25,  ... ); Estimated precision: 43 bits
-
-x1 shifted circularly by 2 = (4, 5, 0.25, 0.5, 0.75, 1, 2, 3,  ... ); Estimated precision: 43 bits
+x1 = [0.24999999999993638, 0.500000000000056, 0.7500000000000366, 0.9999999999999498, 2.0000000000000333, 3.0000000000000675, 3.9999999999999902, 4.99999999999997]
+x1 + x2 = [5.2499999999999485, 4.499999999999966, 3.7500000000000533, 3.0000000000000466, 3.000000000000019, 3.7499999999999836, 4.499999999999986, 5.249999999999975]
+x1 - x2 = [-4.749999999999893, -3.4999999999999805, -2.249999999999964, -0.9999999999998668, 0.9999999999999534, 2.249999999999984, 3.5000000000000973, 4.749999999999956]
+4 * x1 = [1.0000000000004539, 1.9999999999998535, 3.000000000000176, 4.000000000000274, 7.999999999998697, 12.000000000000373, 15.999999999998332, 20.00000000000011]
+x1 * x2 = [1.2500000000002318, 2.000000000000054, 2.2499999999994893, 1.9999999999998272, 2.000000000000205, 2.25000000000003, 1.9999999999997906, 1.2499999999996558]
+x1 shifted circularly by -1 = [0.4999999999998632, 0.749999999999976, 0.9999999999999369, 1.9999999999999858, 2.9999999999998677, 4.000000000000045, 5.000000000000059, 0.25000000000002087]
+x1 shifted circularly by 2 = [3.9999999999999973, 4.99999999999995, 0.2499999999999567, 0.49999999999996825, 0.7500000000000793, 0.9999999999998956, 2.00000000000004, 2.999999999999985]
 
 ================================================================================
 simple_real_numbers with an Unencrypted context
@@ -48,4 +41,4 @@ x1 shifted circularly by 2 = [4.0, 5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0]</code></
   year={2024},
   howpublished={\url{https://github.com/sloede/SecureArithmetic.jl}},
   doi={10.5281/zenodo.10544790}
-}</code></pre><h2 id="Authors"><a class="docs-heading-anchor" href="#Authors">Authors</a><a id="Authors-1"></a><a class="docs-heading-anchor-permalink" href="#Authors" title="Permalink"></a></h2><p>SecureArithmetic.jl was initiated by <a href="https://lakemper.eu">Michael Schlottke-Lakemper</a> (RWTH Aachen University/High-Performance Computing Center Stuttgart (HLRS), Germany), who is also its principal maintainer.</p><h2 id="License-and-contributing"><a class="docs-heading-anchor" href="#License-and-contributing">License and contributing</a><a id="License-and-contributing-1"></a><a class="docs-heading-anchor-permalink" href="#License-and-contributing" title="Permalink"></a></h2><p>SecureArithmetic.jl is available under the MIT license (see <a href="license/#License">License</a>). Contributions by the community are very welcome! For larger proposed changes, feel free to reach out via an issue first.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="reference/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Monday 22 January 2024 07:49">Monday 22 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+}</code></pre><h2 id="Authors"><a class="docs-heading-anchor" href="#Authors">Authors</a><a id="Authors-1"></a><a class="docs-heading-anchor-permalink" href="#Authors" title="Permalink"></a></h2><p>SecureArithmetic.jl was initiated by <a href="https://lakemper.eu">Michael Schlottke-Lakemper</a> (RWTH Aachen University/High-Performance Computing Center Stuttgart (HLRS), Germany), who is also its principal maintainer.</p><h2 id="License-and-contributing"><a class="docs-heading-anchor" href="#License-and-contributing">License and contributing</a><a id="License-and-contributing-1"></a><a class="docs-heading-anchor-permalink" href="#License-and-contributing" title="Permalink"></a></h2><p>SecureArithmetic.jl is available under the MIT license (see <a href="license/#License">License</a>). Contributions by the community are very welcome! For larger proposed changes, feel free to reach out via an issue first.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="reference/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 23 January 2024 13:58">Tuesday 23 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
