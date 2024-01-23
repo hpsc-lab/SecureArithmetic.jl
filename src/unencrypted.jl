@@ -35,28 +35,28 @@ function capacity(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypte
     length(v.data)
 end
 
-function encrypt(data::Vector{<:Real}, public_key::PublicKey,
-                 context::SecureContext{<:Unencrypted})
+function encrypt_impl(data::Vector{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:Unencrypted})
     SecureVector(data, length(data), length(data), context)
 end
 
-function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key::PublicKey)
+function encrypt_impl(plain_vector::PlainVector{<:Unencrypted}, public_key::PublicKey)
     SecureVector(plain_vector.data, length(plain_vector), capacity(plain_vector),
                  plain_vector.context)
 end
 
-function decrypt!(plain_vector::PlainVector{<:Unencrypted},
-                  secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
+function decrypt_impl!(plain_vector::PlainVector{<:Unencrypted},
+                       secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
     plain_vector.data .= secure_vector.data
 
     plain_vector
 end
 
-function decrypt(secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
+function decrypt_impl(secure_vector::SecureVector{<:Unencrypted}, private_key::PrivateKey)
     plain_vector = PlainVector(similar(secure_vector.data), length(secure_vector),
                                capacity(secure_vector), secure_vector.context)
 
-    decrypt!(plain_vector, secure_vector, private_key)
+    decrypt_impl!(plain_vector, secure_vector, private_key)
 end
 
 bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector

@@ -19,6 +19,7 @@ export encrypt, decrypt, decrypt!, bootstrap!
 export level, capacity
 
 include("types.jl")
+include("operations.jl")
 include("openfhe.jl")
 include("unencrypted.jl")
 include("arithmetic.jl")

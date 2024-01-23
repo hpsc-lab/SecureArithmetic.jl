@@ -78,14 +78,15 @@ function capacity(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHE
     Int(OpenFHE.GetSlots(v.data))
 end
 
-function encrypt(data::Vector{<:Real}, public_key, context::SecureContext{<:OpenFHEBackend})
+function encrypt_impl(data::Vector{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:OpenFHEBackend})
     plain_vector = PlainVector(data, context)
     secure_vector = encrypt(plain_vector, public_key)
 
     secure_vector
 end
 
-function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key::PublicKey)
+function encrypt_impl(plain_vector::PlainVector{<:OpenFHEBackend}, public_key::PublicKey)
     context = plain_vector.context
     cc = get_crypto_context(context)
     ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_vector.data)
@@ -95,8 +96,9 @@ function encrypt(plain_vector::PlainVector{<:OpenFHEBackend}, public_key::Public
     secure_vector
 end
 
-function decrypt!(plain_vector::PlainVector{<:OpenFHEBackend},
-                  secure_vector::SecureVector{<:OpenFHEBackend}, private_key::PrivateKey)
+function decrypt_impl!(plain_vector::PlainVector{<:OpenFHEBackend},
+                       secure_vector::SecureVector{<:OpenFHEBackend},
+                       private_key::PrivateKey)
     cc = get_crypto_context(secure_vector)
     OpenFHE.Decrypt(cc, private_key.private_key, secure_vector.data,
                     plain_vector.data)
@@ -104,12 +106,13 @@ function decrypt!(plain_vector::PlainVector{<:OpenFHEBackend},
     plain_vector
 end
 
-function decrypt(secure_vector::SecureVector{<:OpenFHEBackend}, private_key::PrivateKey)
+function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
+                      private_key::PrivateKey)
     context = secure_vector.context
     plain_vector = PlainVector(OpenFHE.Plaintext(), length(secure_vector),
                                capacity(secure_vector), context)
 
-    decrypt!(plain_vector, secure_vector, private_key)
+    decrypt_impl!(plain_vector, secure_vector, private_key)
 end
 
 
