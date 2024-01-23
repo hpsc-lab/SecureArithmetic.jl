@@ -37,7 +37,7 @@ end
 
 function encrypt(data::Vector{<:Real}, public_key::PublicKey,
                  context::SecureContext{<:Unencrypted})
-    SecureVector(data, length(data), context)
+    SecureVector(data, length(data), length(data), context)
 end
 
 function encrypt(plain_vector::PlainVector{<:Unencrypted}, public_key::PublicKey)
