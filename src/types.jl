@@ -8,6 +8,14 @@ function Base.show(io::IO, v::SecureContext)
     print("SecureContext{", backend_name(v), "}()")
 end
 
+"""
+    SecureVector
+
+Holds encrypted data for arithmetic operations. Can be converted to a `PlainVector` using
+[`decrypt`](@ref).
+
+See also: [`PlainVector`](@ref), [`decrypt`](@ref)
+"""
 struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     length::Int
@@ -23,6 +31,14 @@ function Base.show(io::IO, v::SecureVector)
     print("SecureVector{", backend_name(v), "}(data=<encrypted>, length=$(v.length))")
 end
 
+"""
+    PlainVector
+
+Holds encoded - but not encrypted - data for arithmetic operations. Can be converted to a
+`SecureVector` using [`encrypt`](@ref).
+
+See also: [`SecureVector`](@ref), [`encrypt`](@ref)
+"""
 struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     length::Int
