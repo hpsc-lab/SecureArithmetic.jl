@@ -48,6 +48,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
+            @test PlainVector([1, 2, 3], context) isa PlainVector
         end
 
         pv1 = PlainVector(x1, context)
@@ -87,6 +88,35 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "negate" begin
             @test -sv2 isa SecureVector
+        end
+
+        sv_short = encrypt([1.0, 2.0, 3.0], public_key, context)
+
+        @testset verbose=true showtiming=true "circshift" begin
+            @test circshift(sv_short, 1) is SecureVector
+            @test circshift(sv_short, 0) is SecureVector
+            @test_throws ArgumentError circshift(sv_short, 1; wrap_by = :wololo)
+            @test circshift(sv_short, 1; wrap_by = :length) is SecureVector
+            @test circshift(sv_short, -2; wrap_by = :length) is SecureVector
+        end
+
+        @testset verbose=true showtiming=true "length" begin
+            @test length(pv1) == length(x1)
+            @test length(sv1) == length(p1)
+        end
+
+        @testset verbose=true showtiming=true "capacity" begin
+            @test capacity(pv1) == 8
+            @test capacity(sv1) == 8
+        end
+
+        @testset verbose=true showtiming=true "level" begin
+            @test level(pv1) == 0
+            @test level(sv1) == 0
+        end
+
+        @testset verbose=true showtiming=true "collect" begin
+            @test collect(pv1) ≈ x1
         end
 
         @testset verbose=true showtiming=true "show" begin
