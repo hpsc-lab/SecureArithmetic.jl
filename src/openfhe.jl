@@ -46,7 +46,7 @@ function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
 end
 
 function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
-    private_key::PrivateKey, length::Int)
+    private_key::PrivateKey, length::Integer)
     cc = get_crypto_context(context)
     if length != Int(2^ceil(log2(length)))
         error("length have to be a power of two")
@@ -65,7 +65,7 @@ function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
     plain_vector
 end
 
-function PlainVector(data::Vector{Float64}, length::Int, context::SecureContext{<:OpenFHEBackend})
+function PlainVector(data::Vector{Float64}, length::Integer, context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
     if length != Int(2^ceil(log2(length)))
         error("length have to be a power of two")
