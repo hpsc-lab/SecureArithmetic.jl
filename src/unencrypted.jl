@@ -15,10 +15,6 @@ function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted}
     PlainVector(data, length(data), length(data), context)
 end
 
-function PlainVector(data::Vector{<:Real}, length::Integer, context::SecureContext{<:Unencrypted})
-    PlainVector(data, Base.length(data), Base.length(data), context)
-end
-
 function Base.show(io::IO, v::PlainVector{<:Unencrypted})
     print(io, v.data[1:v.length])
 end

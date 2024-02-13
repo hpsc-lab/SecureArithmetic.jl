@@ -38,20 +38,9 @@ end
 function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
                              private_key::PrivateKey)
     cc = get_crypto_context(context)
-    ring_dimension = OpenFHE.GetRingDimension(cc)
-    num_slots = div(ring_dimension,  2)
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, num_slots)
-
-    nothing
-end
-
-function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
-    private_key::PrivateKey, length::Integer)
-    cc = get_crypto_context(context)
-    if length != Int(2^ceil(log2(length)))
-        error("length have to be a power of two")
-    end
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, length)
+    encoding_parameters = OpenFHE.GetEncodingParams(cc)
+    capacity = OpenFHE.GetBatchSize(encoding_parameters)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, capacity)
 
     nothing
 end
@@ -61,18 +50,6 @@ function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
     capacity = OpenFHE.GetSlots(plaintext)
     plain_vector = PlainVector(plaintext, length(data), capacity, context)
-
-    plain_vector
-end
-
-function PlainVector(data::Vector{Float64}, length::Integer, context::SecureContext{<:OpenFHEBackend})
-    cc = get_crypto_context(context)
-    if length != Int(2^ceil(log2(length)))
-        error("length have to be a power of two")
-    end
-    plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data; num_slots = length)
-    capacity = OpenFHE.GetSlots(plaintext)
-    plain_vector = PlainVector(plaintext, Base.length(data), capacity, context)
 
     plain_vector
 end
