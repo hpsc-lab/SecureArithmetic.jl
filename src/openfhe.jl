@@ -115,8 +115,8 @@ end
 function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
     context = secure_vector.context
     cc = get_crypto_context(context)
-    secure_vector = SecureVector(OpenFHE.EvalBootstrap(cc, secure_vector.data), secure_vector.length,
-        secure_vector.capacity, secure_vector.context)
+    ciph = OpenFHE.EvalBootstrap(cc, secure_vector.data)
+    secure_vector = SecureVector(ciph, secure_vector.length, secure_vector.capacity, secure_vector.context)
     secure_vector
 end
 
