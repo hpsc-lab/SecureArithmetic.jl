@@ -53,7 +53,6 @@ function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
 
     plain_vector
 end
-
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainVector(convert(Vector{Float64}, data), context)
 end
