@@ -9,7 +9,6 @@ end
 init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
 init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
-init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, length::Integer) = nothing
 
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
     PlainVector(data, length(data), length(data), context)
