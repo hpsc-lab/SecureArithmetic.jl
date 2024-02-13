@@ -38,9 +38,9 @@ end
 function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
                              private_key::PrivateKey)
     cc = get_crypto_context(context)
-    ring_dimension = OpenFHE.GetRingDimension(cc)
-    num_slots = div(ring_dimension,  2)
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, num_slots)
+    encoding_parameters = OpenFHE.GetEncodingParams(cc)
+    slots = OpenFHE.GetBatchSize(encoding_parameters)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, slots)
 
     nothing
 end
@@ -115,7 +115,7 @@ end
 function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
     context = secure_vector.context
     cc = get_crypto_context(context)
-    OpenFHE.EvalBootstrap(cc, secure_vector.data)
+    secure_vector.data = OpenFHE.EvalBootstrap(cc, secure_vector.data)
 
     secure_vector
 end
