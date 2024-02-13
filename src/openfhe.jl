@@ -39,8 +39,8 @@ function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
                              private_key::PrivateKey)
     cc = get_crypto_context(context)
     encoding_parameters = OpenFHE.GetEncodingParams(cc)
-    capacity = OpenFHE.GetBatchSize(encoding_parameters)
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, capacity)
+    slots = OpenFHE.GetBatchSize(encoding_parameters)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, slots)
 
     nothing
 end
