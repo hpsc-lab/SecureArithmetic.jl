@@ -16,7 +16,7 @@ Holds encrypted data for arithmetic operations. Can be converted to a `PlainVect
 
 See also: [`PlainVector`](@ref), [`decrypt`](@ref)
 """
-struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
+mutable struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     length::Int
     capacity::Int
