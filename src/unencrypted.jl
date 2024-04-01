@@ -1,3 +1,11 @@
+"""
+    Unencrypted
+
+An empty structure used instead of [`OpenFHEBackend`](@ref) to emphasize the usage of unencrypted
+data.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 struct Unencrypted <: AbstractCryptoBackend
     # No data fields required
 end
@@ -10,6 +18,16 @@ init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::Private
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
 init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 
+"""
+    PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
+
+Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
+object of type `SecureContext{<:Unencrypted}`. Returns [`PlainVector`](@ref) with not encoded and
+not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureVector`](@ref).
+        
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+"""
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
     PlainVector(data, length(data), length(data), context)
 end
@@ -23,10 +41,25 @@ function Base.show(io::IO, ::MIME"text/plain", v::PlainVector{<:Unencrypted})
     Base.print_matrix(io, v.data[1:v.length])
 end
 
+"""
+    collect(v::PlainVector{<:Unencrypted})
+
+Returns the real-valued data contained in `v`.
+
+See also: [`PlainVector`](@ref)
+"""
 function Base.collect(v::PlainVector{<:Unencrypted})
     v.data
 end
 
+"""
+    level(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypted}})
+
+Returns the number of scalings, referred to as the level, performed over `v`. For data type derived
+from `Unencrypted`, the level is always equal to 0.
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref)
+"""
 function level(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypted}})
     0
 end

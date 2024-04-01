@@ -1,5 +1,13 @@
 abstract type AbstractCryptoBackend end
 
+"""
+    SecureContext
+
+A structure used to generalize `CryptoContext` defined in OpenFHE.jl for unencrypted data, to
+maximize utilization of the same code for both plaintext and ciphertext.
+
+See also: [`OpenFHEBackend`](@ref), [`Unencrypted`](@ref)
+"""
 struct SecureContext{CryptoBackendT <: AbstractCryptoBackend}
     backend::CryptoBackendT
 end
@@ -70,6 +78,13 @@ See also: [`length`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
 """
 capacity(v::Union{PlainVector, SecureVector}) = v.capacity
 
+"""
+    PrivateKey
+
+Holds a private key that is used for decryption in [`decrypt`](@ref).
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`decrypt`](@ref)
+"""
 struct PrivateKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     private_key::KeyT
     context::SecureContext{CryptoBackendT}
@@ -83,6 +98,13 @@ function Base.show(io::IO, key::PrivateKey)
     print("PrivateKey{", backend_name(key), "}()")
 end
 
+"""
+    PublicKey
+
+Holds a public key that is used for encryption in [`encrypt`](@ref).
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref)
+"""
 struct PublicKey{CryptoBackendT <: AbstractCryptoBackend, KeyT}
     public_key::KeyT
     context::SecureContext{CryptoBackendT}
