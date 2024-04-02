@@ -12,7 +12,7 @@ end
 """
     get_crypto_context(context::SecureContext{<:OpenFHEBackend})
 
-Returns a `OpenFHE.CryptoContext` object stored in a given `context`.
+Return a `OpenFHE.CryptoContext` object stored in a given `context`.
 
 See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
 """
@@ -23,7 +23,7 @@ end
     get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
                                 PlainVector{<:OpenFHEBackend}})
 
-Returns a `OpenFHE.CryptoContext` object stored in `v`.
+Return a `OpenFHE.CryptoContext` object stored in `v`.
 
 See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref),
 [`OpenFHEBackend`](@ref)
@@ -36,7 +36,7 @@ end
 """
     generate_keys(context::SecureContext{<:OpenFHEBackend})
 
-Generates and returns public and private keys.
+Generate and return public and private keys.
 
 See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
 [`OpenFHEBackend`](@ref)
@@ -153,7 +153,7 @@ end
 """
     collect(v::PlainVector{<:OpenFHEBackend})
 
-Decodes and returns the real-valued data contained in `v`.
+Decode and return the real-valued data contained in `v`.
 
 See also: [`PlainVector`](@ref), [`OpenFHEBackend`](@ref)
 """
@@ -164,7 +164,7 @@ end
 """
     level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
 
-Returns the number of scalings, referred to as the level, performed over `v`.
+Return the number of scalings, referred to as the level, performed over `v`.
 
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`OpenFHEBackend`](@ref)
 """
@@ -212,7 +212,7 @@ end
 """
     bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
      
-Refreshes a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
+Refreshe a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
 
 See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
 """

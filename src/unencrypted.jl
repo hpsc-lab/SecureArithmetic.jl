@@ -13,7 +13,7 @@ end
 """
     generate_keys(context::SecureContext{<:Unencrypted})
 
-Returns public and private keys initialized as `nothing` for unencrypted data.
+Return public and private keys initialized as `nothing` for unencrypted data.
 
 See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
 [`Unencrypted`](@ref)
@@ -77,7 +77,7 @@ end
 """
     collect(v::PlainVector{<:Unencrypted})
 
-Returns the real-valued data contained in `v`.
+Return the real-valued data contained in `v`.
 
 See also: [`PlainVector`](@ref)
 """
@@ -88,7 +88,7 @@ end
 """
     level(v::Union{SecureVector{<:Unencrypted}, PlainVector{<:Unencrypted}})
 
-Returns the number of scalings, referred to as the level, performed over `v`. For data type derived
+Return the number of scalings, referred to as the level, performed over `v`. For data type derived
 from `Unencrypted`, the level is always equal to 0.
 
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref)
