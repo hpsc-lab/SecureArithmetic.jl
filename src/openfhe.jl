@@ -38,7 +38,8 @@ end
 
 Generates and returns public and private keys.
 
-See also: [`PublicKey`](@ref), [`PrivateKey`](@ref)
+See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
+[`OpenFHEBackend`](@ref)
 """
 function generate_keys(context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
@@ -86,6 +87,16 @@ function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::P
     nothing
 end
 
+"""
+    init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
+                        private_key::PrivateKey)
+
+Generate the necessary keys from `private_key` to enable bootstrapping for a given
+`context`. Supported for CKKS only.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`bootstrap!`](@ref)
+"""
 function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
                              private_key::PrivateKey)
     cc = get_crypto_context(context)
@@ -198,7 +209,13 @@ function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
     decrypt!(plain_vector, secure_vector, private_key)
 end
 
+"""
+    bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
+     
+Refreshes a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
 
+See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
+"""
 function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
     context = secure_vector.context
     cc = get_crypto_context(context)

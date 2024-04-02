@@ -10,12 +10,45 @@ struct Unencrypted <: AbstractCryptoBackend
     # No data fields required
 end
 
+"""
+    generate_keys(context::SecureContext{<:Unencrypted})
+
+Returns public and private keys initialized as `nothing` for unencrypted data.
+
+See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
+[`Unencrypted`](@ref)
+"""
 function generate_keys(context::SecureContext{<:Unencrypted})
     PublicKey(context, nothing), PrivateKey(context, nothing)
 end
 
+"""
+    init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
+
+An empty duplicate of [`init_multiplication!`](@ref) for unencrypted data.
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
+[`init_multiplication!`](@ref)
+"""
 init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
+"""
+    init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts)
+
+An empty duplicate of [`init_rotation!`](@ref) for unencrypted data.
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
+[`init_rotation!`](@ref)
+"""
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
+"""
+    init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
+              
+
+An empty duplicate of [`init_bootstrapping!`](@ref) for unencrypted data.
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
+[`init_bootstrapping!`](@ref)
+"""
 init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 
 """
@@ -88,6 +121,14 @@ function decrypt_impl(secure_vector::SecureVector{<:Unencrypted}, private_key::P
     decrypt!(plain_vector, secure_vector, private_key)
 end
 
+"""
+    bootstrap!(secure_vector::SecureVector{<:Unencrypted})
+     
+An empty duplicate of [`bootstrap!`](@ref) for unencrypted data.
+
+See also: [`SecureVector`](@ref), [`Unencrypted`](@ref), [`bootstrap!`](@ref),
+[`init_bootstrapping!`](@ref)
+"""
 bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector
 
 
