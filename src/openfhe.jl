@@ -111,7 +111,7 @@ end
     PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend})
 
 Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
-object of type `SecureContext{<:OpenFHEBackend}`. Returns [`PlainVector`](@ref) with encoded but
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
 not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureVector`](@ref).
 
@@ -130,7 +130,7 @@ end
     PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
 
 Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
-object of type `SecureContext{<:OpenFHEBackend}`. Returns [`PlainVector`](@ref) with encoded but
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
 not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureVector`](@ref).
     
@@ -212,7 +212,7 @@ end
 """
     bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
      
-Refreshe a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
+Refresh a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
 
 See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
 """
