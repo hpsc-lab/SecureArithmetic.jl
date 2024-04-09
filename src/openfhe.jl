@@ -271,3 +271,185 @@ function rotate(sv::SecureVector{<:OpenFHEBackend}, shift; wrap_by)
 
     secure_vector
 end
+
+function get_crypto_context(v::Union{SecureMatrix{<:OpenFHEBackend},
+    PlainMatrix{<:OpenFHEBackend}})
+get_crypto_context(v.context)
+end
+
+function PlainMatrix(data::Vector{Vector{<:Real}}, context::SecureContext{CryptoBackendT <: OpenFHEBackend}) where CryptoBackendT
+plain_vectors = PlainVector.(data, context)
+plain_matrix = PlainMatrix(plain_vectors, length(data), context)
+
+plain_matrix
+end
+# not optimal? 
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{CryptoBackendT <: OpenFHEBackend}) where CryptoBackendT
+plain_vectors = Vector{PlainVector{CryptoBackendT, OpenFHE.Plaintext}}
+column_length, row_length = size(data)
+for i in range(0, column_length-1)
+append!(plain_vectors, PlainVector(data[1+i*row_length:(i+1)*row_length], context))
+end
+plain_matrix = PlainMatrix(plain_vectors, length(plain_vectors), context)
+
+plain_matrix
+end
+
+function level(v::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})
+level(v.data[1])
+end
+
+function encrypt_impl(plain_matrix::PlainMatrix{CryptoBackendT <: OpenFHEBackend}, public_key::PublicKey) where CryptoBackendT
+secure_vectors = encrypt.(plain_matrix.data, public_key)
+secure_matrix = SecureMatrix(secure_vectors, length(plain_matrix), context)
+
+secure_matrix
+end
+
+function decrypt_impl(secure_matrix::SecureMatrix{<:OpenFHEBackend},
+private_key::PrivateKey)
+plain_matrix = PlainMatrix(decrypt.(secure_matrix.data, private_key),
+length(secure_matrix), secure_matrix.context)
+
+plain_matrix
+end
+
+function bootstrap!(secure_matrix::SecureMatrix{<:OpenFHEBackend})
+bootstrap!.(secure_matrix.data)
+
+secure_matrix
+end
+
+
+############################################################################################
+# Arithmetic operations
+############################################################################################
+
+function add(sm1::SecureMatrix, sm2::SecureMatrix)
+secure_matrix = SecureMatrix(add.(sm1.data, sm2.data), length(sm1), sm1.context)
+
+secure_matrix
+end
+
+function add(sm::SecureMatrix, pm::PlainMatrix)
+secure_matrix = SecureMatrix(add.(sm.data, pm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function add(sm::SecureMatrix, scalar::Real)
+secure_matrix = SecureMatrix(add.(sm.data, scalar), length(sm), sm.context)
+
+secure_matrix
+end
+
+function add(sm::SecureMatrix, sv::SecureVector)
+secure_matrix = SecureMatrix(add.(sm.data, sv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function add(sm::SecureMatrix, pv::PlainVector)
+secure_matrix = SecureMatrix(add.(sm.data, pv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(sm1::SecureMatrix, sm2::SecureMatrix)
+secure_matrix = SecureMatrix(subtract.(sm1.data, sm2.data), length(sm1), sm1.context)
+
+secure_matrix
+end
+
+function subtract(sm::SecureMatrix, pm::PlainMatrix)
+secure_matrix = SecureMatrix(subtract.(sm.data, pm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(pm::PlainMatrix, sm::SecureMatrix)
+secure_matrix = SecureMatrix(subtract.(pm.data, sm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(sm::SecureMatrix, scalar::Real)
+secure_matrix = SecureMatrix(subtract.(sm.data, scalar), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(scalar::Real, sm::SecureMatrix)
+secure_matrix = SecureMatrix(subtract.(scalar, sm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(sm::SecureMatrix, sv::SecureVector)
+secure_matrix = SecureMatrix(subtract.(sm.data, sv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(sv::SecureVector, sm::SecureMatrix)
+secure_matrix = SecureMatrix(subtract.(sv, sm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(sm::SecureMatrix, pv::PlainVector)
+secure_matrix = SecureMatrix(subtract.(sm.data, pv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function subtract(pv::PlainVector, sm::SecureMatrix)
+secure_matrix = SecureMatrix(subtract.(pv, sm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function negate(sm::SecureMatrix)
+secure_matrix = SecureMatrix(negate.(sm.data), length(sm), sm.context)
+
+secure_matrix
+end
+
+function multiply(sm1::SecureMatrix, sm2::SecureMatrix)
+secure_matrix = SecureMatrix(multiply.(sm1.data, sm2.data), length(sm1), sm1.context)
+
+secure_matrix
+end
+
+function multiply(sm::SecureMatrix, pm::PlainMatrix)
+secure_matrix = SecureMatrix(multiply.(sm.data, pm.data), length(sm), sm.context)
+
+secure_vector
+end
+
+function multiply(sm::SecureMatrix, scalar::Real)
+secure_matrix = SecureMatrix(multiply.(sm.data, scalar), length(sm), sm.context)
+
+secure_matrix
+end
+
+function multiply(sm::SecureMatrix, sv::SecureVector)
+secure_matrix = SecureMatrix(multiply.(sm.data, sv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function multiply(sm::SecureMatrix, pv::PlainVector)
+secure_matrix = SecureMatrix(multiply.(sm.data, pv), length(sm), sm.context)
+
+secure_matrix
+end
+
+function rotate(sm::SecureMatrix, shift; wrap_by)
+# rotation along x axis
+secure_matrix_rotated = SecureMatrix(rotate.(sm.data, shift[1]; wrap_by), length(sm), sm.context)
+# rotation along y axis
+circshift!(secure_matrix_rotated, shift[2])
+
+secure_matrix_rotated
+end

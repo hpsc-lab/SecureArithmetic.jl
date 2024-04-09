@@ -105,3 +105,25 @@ __parameterless_type(T) = Base.typename(T).wrapper
 # Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
                       PublicKey{T}}) where T = string(__parameterless_type(T))
+
+struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::Vector{PlainVector{CryptoBackendT, DataT}}
+    length::Int
+    context::SecureContext{CryptoBackendT}
+
+    function PlainMatrix(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data[1])}(data, length, context)
+    end
+end
+
+struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::Vector{SecureVector{CryptoBackendT, DataT}}
+    length::Int
+    context::SecureContext{CryptoBackendT}
+
+    function SecureMatrix(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data[1])}(data, length, context)
+    end
+end
+
+Base.length(v::Union{PlainMatrix, SecureMatrix}) = v.length

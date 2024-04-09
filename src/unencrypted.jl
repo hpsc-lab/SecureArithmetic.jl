@@ -114,3 +114,34 @@ function rotate(sv::SecureVector{<:Unencrypted}, shift; wrap_by)
     # `wrap_by` can be ignored since here length is always equal to capacity
     SecureVector(circshift(sv.data, shift), length(sv), capacity(sv), sv.context)
 end
+
+function PlainMatrix(data::Vector{Vector{<:Real}}, context::SecureContext{CryptoBackendT <: Unencrypted}) where CryptoBackendT
+    plain_vectors = PlainVector.(data, context)
+    PlainMatrix(plain_vectors, length(data), context)
+end
+function PlainMatrix(data::Matrix{RealT <: Real}, context::SecureContext{CryptoBackendT <: Unencrypted}) where {CryptoBackendT, RealT}
+    plain_vectors = Vector{PlainVector{CryptoBackendT, Vector{RealT}}}
+    column_length, row_length = size(data)    
+    for i in range(0, column_length-1)
+        # not optimal?
+        append!(plain_vectors, PlainVector(data[1+i*row_length:(i+1)*row_length], context))
+    end
+    PlainMatrix(plain_vectors, length(plain_vectors), context)
+end
+
+function level(v::Union{SecureMatrix{<:Unencrypted}, PlainMatrix{<:Unencrypted}})
+    0
+end
+
+function encrypt_impl(plain_matrix::PlainMatrix{<:Unencrypted}, public_key::PublicKey)
+    SecureMatrix(plain_matrix.data, length(plain_matrix), plain_vector.context)
+end
+
+function decrypt_impl(secure_matrix::SecureMatrix{<:Unencrypted}, private_key::PrivateKey)
+    plain_matrix = PlainVector(decrypt.(secure_matrix.data, private_key), length(secure_matrix),
+                               secure_matrix.context)
+
+    plain_matrix
+end
+
+bootstrap!(secure_matrix::SecureMatrix{<:Unencrypted}) = secure_matrix
