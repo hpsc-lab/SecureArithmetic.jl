@@ -309,11 +309,19 @@ function encrypt_impl(plain_matrix::PlainMatrix, public_key::PublicKey)
     secure_matrix
 end
 
-function decrypt_impl(secure_matrix::SecureMatrix, private_key::PrivateKey)
-    plain_matrix = PlainMatrix(decrypt.(secure_matrix.data, Ref(private_key)),
-    length(secure_matrix), secure_matrix.context)
+function decrypt_impl!(plain_matrix::PlainMatrix, secure_matrix::SecureMatrix, private_key::PrivateKey)
+    decrypt_impl!.(plain_matrix.data, secure_matrix.data, Ref(private_key))
 
     plain_matrix
+end
+
+function decrypt_impl(secure_matrix::SecureMatrix, private_key::PrivateKey)
+    context = secure_matrix.context
+    plain_matrix = PlainMatrix([PlainVector(OpenFHE.Plaintext(), length(secure_matrix.data[1]),
+                                            capacity(secure_matrix.data[1]), context)],
+                               length(secure_matrix), context)
+
+    decrypt_impl!(plain_matrix, secure_matrix, private_key)
 end
 
 function bootstrap!(secure_matrix::SecureMatrix)
