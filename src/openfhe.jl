@@ -272,6 +272,10 @@ function rotate(sv::SecureVector{<:OpenFHEBackend}, shift; wrap_by)
     secure_vector
 end
 
+############################################################################################
+# Matrix
+############################################################################################
+
 function get_crypto_context(v::Union{SecureMatrix{<:OpenFHEBackend},
     PlainMatrix{<:OpenFHEBackend}})
     get_crypto_context(v.context)
@@ -282,6 +286,9 @@ function PlainMatrix(data::Vector{Vector{Float64}}, context::SecureContext)
     plain_matrix = PlainMatrix(plain_vectors, length(data), context)
 
     plain_matrix
+end
+function PlainMatrix(data::Vector{DataT}, context::SecureContext) where DataT<:Vector{<:Real}
+    PlainMatrix(convert(Vector{Vector{Float64}}, data), context)
 end
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
     PlainMatrix(Vector{Float64}[eachrow(data)...], context)
