@@ -78,7 +78,7 @@ Base.:-(sm::SecureMatrix) = negate(sm)
 # Multiply
 Base.:*(sm1::SecureMatrix, sm2::SecureMatrix) = multiply(sm1, sm2)
 Base.:*(sm::SecureMatrix, pm::PlainMatrix) = multiply(sm, pm)
-Base.:*(pm::PlainVector, sm::SecureMatrix) = multiply(sm, pm)
+Base.:*(pm::PlainMatrix, sm::SecureMatrix) = multiply(sm, pm)
 Base.:*(sm::SecureMatrix, scalar::Real) = multiply(sm, scalar)
 Base.:*(scalar::Real, sm::SecureMatrix) = multiply(sm, scalar)
 Base.:*(sm::SecureMatrix, sv::SecureVector) = multiply(sm, sv)
@@ -88,12 +88,12 @@ Base.:*(pv::PlainVector, sm::SecureMatrix) = multiply(sm, pv)
 
 # circular shift
 
-function Base.circshift(sm::SecureMatrix, shift::Union{Vector{Int}, Tuple{Int}}; wrap_by = :capacity)
+function Base.circshift(sm::SecureMatrix, shift::Union{Vector{Int}, Tuple{Int, Int}}; wrap_by = :capacity)
     if !(wrap_by in (:length, :capacity))
         throw(ArgumentError("Unsupported value '$wrap_by' passed to `wrap_by` (must be `:length` or `:capacity`)"))
     end
 
-    if shift == 0
+    if shift[1] == 0 && shift[2] == 0
         return sm
     end
 

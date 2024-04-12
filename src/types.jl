@@ -111,8 +111,9 @@ struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     length::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainMatrix(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data[1])}(data, length, context)
+    function PlainMatrix(data::Vector{PlainVector{CryptoBackendT, DataT}}, length,
+                         context::SecureContext{CryptoBackendT}) where {CryptoBackendT, DataT}
+        new{CryptoBackendT, DataT}(data, length, context)
     end
 end
 
@@ -121,8 +122,9 @@ struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     length::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureMatrix(data, length, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data[1])}(data, length, context)
+    function SecureMatrix(data::Vector{SecureVector{CryptoBackendT, DataT}}, length,
+                          context::SecureContext{CryptoBackendT}) where {CryptoBackendT, DataT}
+        new{CryptoBackendT, DataT}(data, length, context)
     end
 end
 

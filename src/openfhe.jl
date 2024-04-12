@@ -277,44 +277,39 @@ function get_crypto_context(v::Union{SecureMatrix{<:OpenFHEBackend},
     get_crypto_context(v.context)
 end
 
-function PlainMatrix(data::Vector{Vector{<:Real}}, context::SecureContext{CryptoBackendT <: OpenFHEBackend}) where CryptoBackendT
-    plain_vectors = PlainVector.(data, context)
+function PlainMatrix(data::Vector{Vector{Float64}}, context::SecureContext)
+    plain_vectors = PlainVector.(data, Ref(context))
     plain_matrix = PlainMatrix(plain_vectors, length(data), context)
 
     plain_matrix
 end
-# not optimal? 
-function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{CryptoBackendT <: OpenFHEBackend}) where CryptoBackendT
-    plain_vectors = Vector{PlainVector{CryptoBackendT, OpenFHE.Plaintext}}
-    column_length, row_length = size(data)
-    for i in range(0, column_length-1)
-        append!(plain_vectors, PlainVector(data[1+i*row_length:(i+1)*row_length], context))
-    end
-    plain_matrix = PlainMatrix(plain_vectors, length(plain_vectors), context)
-
-    plain_matrix
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
+    PlainMatrix(Vector{Float64}[eachrow(data)...], context)
 end
 
-function level(v::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})
+function level(v::Union{SecureMatrix, PlainMatrix})
     level(v.data[1])
 end
 
-function encrypt_impl(plain_matrix::PlainMatrix{CryptoBackendT <: OpenFHEBackend}, public_key::PublicKey) where CryptoBackendT
-    secure_vectors = encrypt.(plain_matrix.data, public_key)
-    secure_matrix = SecureMatrix(secure_vectors, length(plain_matrix), context)
+function Base.collect(m::PlainMatrix)
+    collect.(m.data)
+end
+
+function encrypt_impl(plain_matrix::PlainMatrix, public_key::PublicKey)
+    secure_vectors = encrypt.(plain_matrix.data, Ref(public_key))
+    secure_matrix = SecureMatrix(secure_vectors, length(plain_matrix), plain_matrix.context)
 
     secure_matrix
 end
 
-function decrypt_impl(secure_matrix::SecureMatrix{<:OpenFHEBackend},
-private_key::PrivateKey)
-    plain_matrix = PlainMatrix(decrypt.(secure_matrix.data, private_key),
+function decrypt_impl(secure_matrix::SecureMatrix, private_key::PrivateKey)
+    plain_matrix = PlainMatrix(decrypt.(secure_matrix.data, Ref(private_key)),
     length(secure_matrix), secure_matrix.context)
 
     plain_matrix
 end
 
-function bootstrap!(secure_matrix::SecureMatrix{<:OpenFHEBackend})
+function bootstrap!(secure_matrix::SecureMatrix)
     bootstrap!.(secure_matrix.data)
 
     secure_matrix
@@ -344,13 +339,13 @@ function add(sm::SecureMatrix, scalar::Real)
 end
 
 function add(sm::SecureMatrix, sv::SecureVector)
-    secure_matrix = SecureMatrix(add.(sm.data, sv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(add.(sm.data, Ref(sv)), length(sm), sm.context)
 
     secure_matrix
 end
 
 function add(sm::SecureMatrix, pv::PlainVector)
-    secure_matrix = SecureMatrix(add.(sm.data, pv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(add.(sm.data, Ref(pv)), length(sm), sm.context)
 
     secure_matrix
 end
@@ -386,25 +381,25 @@ function subtract(scalar::Real, sm::SecureMatrix)
 end
 
 function subtract(sm::SecureMatrix, sv::SecureVector)
-    secure_matrix = SecureMatrix(subtract.(sm.data, sv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(subtract.(sm.data, Ref(sv)), length(sm), sm.context)
 
     secure_matrix
 end
 
 function subtract(sv::SecureVector, sm::SecureMatrix)
-    secure_matrix = SecureMatrix(subtract.(sv, sm.data), length(sm), sm.context)
+    secure_matrix = SecureMatrix(subtract.(Ref(sv), sm.data), length(sm), sm.context)
 
     secure_matrix
 end
 
 function subtract(sm::SecureMatrix, pv::PlainVector)
-    secure_matrix = SecureMatrix(subtract.(sm.data, pv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(subtract.(sm.data, Ref(pv)), length(sm), sm.context)
 
     secure_matrix
 end
 
 function subtract(pv::PlainVector, sm::SecureMatrix)
-    secure_matrix = SecureMatrix(subtract.(pv, sm.data), length(sm), sm.context)
+    secure_matrix = SecureMatrix(subtract.(Ref(pv), sm.data), length(sm), sm.context)
 
     secure_matrix
 end
@@ -434,22 +429,25 @@ function multiply(sm::SecureMatrix, scalar::Real)
 end
 
 function multiply(sm::SecureMatrix, sv::SecureVector)
-    secure_matrix = SecureMatrix(multiply.(sm.data, sv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(multiply.(sm.data, Ref(sv)), length(sm), sm.context)
 
     secure_matrix
 end
 
 function multiply(sm::SecureMatrix, pv::PlainVector)
-    secure_matrix = SecureMatrix(multiply.(sm.data, pv), length(sm), sm.context)
+    secure_matrix = SecureMatrix(multiply.(sm.data, Ref(pv)), length(sm), sm.context)
 
     secure_matrix
 end
 
 function rotate(sm::SecureMatrix, shift; wrap_by)
     # rotation along x axis
-    secure_matrix_rotated = SecureMatrix(rotate.(sm.data, shift[1]; wrap_by), length(sm), sm.context)
+    secure_matrix_rotated = deepcopy(sm)
+    if shift[1]!= 0
+        secure_matrix_rotated = SecureMatrix(rotate.(sm.data, shift[1]; wrap_by), length(sm), sm.context)
+    end
     # rotation along y axis
-    circshift!(secure_matrix_rotated, shift[2])
+    circshift!(secure_matrix_rotated.data, shift[2])
 
     secure_matrix_rotated
 end
