@@ -141,10 +141,12 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         m1 = [[0.25, 0.5, 0.75], [1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
         m2 = [6.0 5.0 4.0; 3.0 2.0 1.0; 0.75 0.5 0.25]
+        m3 = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
         @testset verbose=true showtiming=true "PlainMatrix" begin
             @test PlainMatrix(m1, context) isa PlainMatrix
             @test PlainMatrix(m2, context) isa PlainMatrix
+            @test PlainMatrix(m3, context) isa PlainMatrix
         end
 
         pm1 = PlainMatrix(m1, context)
