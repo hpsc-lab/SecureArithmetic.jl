@@ -1,7 +1,9 @@
 [deps]
 OpenFHE = "77ce9b8e-ecf5-45d1-bd8a-d31f384f2f95"
+OpenFHE_jll = "a2687184-f17b-54bc-b2bb-b849352af807"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 OpenFHE = "0.1"
+OpenFHE_jll = "1.1.2"
 Test = "1"
