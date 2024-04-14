@@ -276,11 +276,6 @@ end
 # Matrix
 ############################################################################################
 
-function get_crypto_context(v::Union{SecureMatrix{<:OpenFHEBackend},
-    PlainMatrix{<:OpenFHEBackend}})
-    get_crypto_context(v.context)
-end
-
 function PlainMatrix(data::Vector{Vector{Float64}}, context::SecureContext)
     plain_vectors = PlainVector.(data, Ref(context))
     plain_matrix = PlainMatrix(plain_vectors, length(data), context)
@@ -294,12 +289,21 @@ function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
     PlainMatrix(Vector{Float64}[eachrow(data)...], context)
 end
 
-function level(v::Union{SecureMatrix, PlainMatrix})
-    level(v.data[1])
+function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
+    print(io, collect(m))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
+    print(io, m.length*m.data[1].length, "-element PlainMatrix{OpenFHEBackend}:\n")
+    Base.print_matrix(io, collect(m))
 end
 
 function Base.collect(m::PlainMatrix)
     collect.(m.data)
+end
+
+function level(v::Union{SecureMatrix, PlainMatrix})
+    level(v.data[1])
 end
 
 function encrypt_impl(plain_matrix::PlainMatrix, public_key::PublicKey)
@@ -309,19 +313,20 @@ function encrypt_impl(plain_matrix::PlainMatrix, public_key::PublicKey)
     secure_matrix
 end
 
-function decrypt_impl!(plain_matrix::PlainMatrix, secure_matrix::SecureMatrix, private_key::PrivateKey)
+function decrypt_impl!(plain_matrix::PlainMatrix{<:OpenFHEBackend},
+                       secure_matrix::SecureMatrix{<:OpenFHEBackend}, private_key::PrivateKey)
     decrypt_impl!.(plain_matrix.data, secure_matrix.data, Ref(private_key))
 
     plain_matrix
 end
 
-function decrypt_impl(secure_matrix::SecureMatrix, private_key::PrivateKey)
+function decrypt_impl(secure_matrix::SecureMatrix{<:OpenFHEBackend}, private_key::PrivateKey)
     context = secure_matrix.context
-    plain_matrix = PlainMatrix([PlainVector(OpenFHE.Plaintext(), length(secure_matrix.data[1]),
-                                            capacity(secure_matrix.data[1]), context)],
+    plain_matrix = PlainMatrix([PlainVector(OpenFHE.Plaintext(), length(sv), capacity(sv), context)
+                                for sv in secure_matrix.data],
                                length(secure_matrix), context)
 
-    decrypt_impl!(plain_matrix, secure_matrix, private_key)
+    decrypt!(plain_matrix, secure_matrix, private_key)
 end
 
 function bootstrap!(secure_matrix::SecureMatrix)
@@ -332,9 +337,9 @@ end
 
 
 ############################################################################################
-# Arithmetic operations
+# Arithmetic operations on matrix
 ############################################################################################
-
+# All operations are defined elementwise 
 function add(sm1::SecureMatrix, sm2::SecureMatrix)
     secure_matrix = SecureMatrix(add.(sm1.data, sm2.data), length(sm1), sm1.context)
 

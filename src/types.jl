@@ -96,16 +96,6 @@ function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
-# Get wrapper name of a potentially parametric type
-# Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
-# Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20
-# Note: prefixed by `__` since it is really, really dirty black magic internals we use here!
-__parameterless_type(T) = Base.typename(T).wrapper
-
-# Convenience method for getting human-readable names
-backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
-                      PublicKey{T}}) where T = string(__parameterless_type(T))
-
 struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::Vector{PlainVector{CryptoBackendT, DataT}}
     length::Int
@@ -115,6 +105,10 @@ struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
                          context::SecureContext{CryptoBackendT}) where {CryptoBackendT, DataT}
         new{CryptoBackendT, DataT}(data, length, context)
     end
+end
+
+function Base.show(io::IO, m::PlainMatrix)
+    print("PlainMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.length)*$(m.data[1].length))")
 end
 
 struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
@@ -128,4 +122,19 @@ struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     end
 end
 
+function Base.show(io::IO, m::SecureMatrix)
+    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.length)*$(m.data[1].length))")
+end
+
 Base.length(v::Union{PlainMatrix, SecureMatrix}) = v.length
+
+# Get wrapper name of a potentially parametric type
+# Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
+# Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20
+# Note: prefixed by `__` since it is really, really dirty black magic internals we use here!
+__parameterless_type(T) = Base.typename(T).wrapper
+
+# Convenience method for getting human-readable names
+backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
+                      PublicKey{T}, PlainMatrix{T},
+                      SecureMatrix{T}}) where T = string(__parameterless_type(T))

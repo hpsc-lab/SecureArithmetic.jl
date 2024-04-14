@@ -224,6 +224,20 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         @testset verbose=true showtiming=true "collect matrix" begin
             @test collect(pm1) ≈ m1
         end
+
+        @testset verbose=true showtiming=true "show matrix" begin
+            @test_nowarn show(stdout, pm1)
+            println()
+
+            @test_nowarn show(stdout, MIME"text/plain"(), pm1)
+            println()
+
+            @test_nowarn show(stdout, sm1)
+            println()
+
+            @test_nowarn show(stdout, MIME"text/plain"(), sm1)
+            println()
+        end
     end
 end
 
