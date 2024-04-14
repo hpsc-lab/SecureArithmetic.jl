@@ -302,8 +302,8 @@ function Base.collect(m::PlainMatrix)
     collect.(m.data)
 end
 
-function level(v::Union{SecureMatrix, PlainMatrix})
-    level(v.data[1])
+function level(m::Union{SecureMatrix, PlainMatrix})
+    level(m.data[1])
 end
 
 function encrypt_impl(plain_matrix::PlainMatrix, public_key::PublicKey)
