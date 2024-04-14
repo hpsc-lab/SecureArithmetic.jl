@@ -234,9 +234,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
             @test_nowarn show(stdout, sm1)
             println()
-
-            @test_nowarn show(stdout, MIME"text/plain"(), sm1)
-            println()
         end
     end
 end

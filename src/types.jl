@@ -107,10 +107,6 @@ struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     end
 end
 
-function Base.show(io::IO, m::PlainMatrix)
-    print("PlainMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.length)*$(m.data[1].length))")
-end
-
 struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::Vector{SecureVector{CryptoBackendT, DataT}}
     length::Int
