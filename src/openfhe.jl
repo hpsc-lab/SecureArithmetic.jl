@@ -346,7 +346,7 @@ function rotate(sv::SecureVector{<:OpenFHEBackend}, shift; wrap_by)
             mask_rotated[first:last] .= 1
         else
             first = abs(shift) + 1
-            last = length(sv) + abs(shift)
+            last = length(sv)
             mask_rotated[first:last] .= 1
         end
         plaintext1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask_rotated)
