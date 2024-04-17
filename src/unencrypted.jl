@@ -1,7 +1,7 @@
 """
     Unencrypted
 
-An alternative backend to used instead of [`OpenFHEBackend`](@ref) to experiment with
+An alternative backend to use instead of [`OpenFHEBackend`](@ref) to experiment with
 algorithms on unencrypted data.
 
 See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)

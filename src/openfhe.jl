@@ -74,6 +74,10 @@ end
 
 Generate rotation keys for use with `OpenFHE.EvalRotate` using the `private_key` and for the
 rotation indexes in `shifts`. The keys are stored in the given `context`.
+Positiv shift defines rotation to the rigth, e.g. a rotation with a shift 1:
+[1, 2, 3, 4] -> [4, 1, 2, 3].
+Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
+[1, 2, 3, 4] -> [2, 3, 4, 1].
 
 Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
 OpenFHE.
