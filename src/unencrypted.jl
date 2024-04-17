@@ -1,8 +1,8 @@
 """
     Unencrypted
 
-An empty structure used instead of [`OpenFHEBackend`](@ref) to emphasize the usage of unencrypted
-data.
+An alternative backend to used instead of [`OpenFHEBackend`](@ref) to experiment with
+algorithms on unencrypted data.
 
 See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
 """
@@ -13,7 +13,7 @@ end
 """
     generate_keys(context::SecureContext{<:Unencrypted})
 
-Return public and private keys initialized as `nothing` for unencrypted data.
+Return public and private keys for use with unencrypted data.
 
 See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
 [`Unencrypted`](@ref)
@@ -31,6 +31,7 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 [`init_multiplication!`](@ref)
 """
 init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
+
 """
     init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts)
 
@@ -40,6 +41,7 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 [`init_rotation!`](@ref)
 """
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
+
 """
     init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
               

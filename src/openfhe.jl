@@ -1,7 +1,8 @@
 """
     OpenFHEBackend
 
-Holds a `OpenFHE.CryptoContext` object.
+Cryptography backend for use with the homomorphic encryption library OpenFHE
+(https://github.com/openfheorg/openfhe-development).
 
 See also: [`SecureContext`](@ref), [`Unencrypted`](@ref)
 """
@@ -126,6 +127,7 @@ function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
 
     plain_vector
 end
+
 """
     PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
 
