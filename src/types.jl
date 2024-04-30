@@ -118,6 +118,36 @@ function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
+mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::DataT
+    size::Tuple{Int, Int}
+    capacity::Int
+    context::SecureContext{CryptoBackendT}
+
+    function SecureMatrix(data, size, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, size, capacity, context)
+    end
+end
+
+function Base.show(io::IO, m::SecureMatrix)
+    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(v.size))")
+end
+
+struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
+    data::DataT
+    size::Tuple{Int, Int}
+    capacity::Int
+    context::SecureContext{CryptoBackendT}
+
+    function PlainMatrix(data, size, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, size, capacity, context)
+    end
+end
+
+Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.size
+
+capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
+
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
 # Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20
@@ -126,4 +156,4 @@ __parameterless_type(T) = Base.typename(T).wrapper
 
 # Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
-                      PublicKey{T}}) where T = string(__parameterless_type(T))
+                      PublicKey{T}, SecureMatrix{T}}) where T = string(__parameterless_type(T))
