@@ -424,7 +424,7 @@ function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
 end
 
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
-    PlainMatrix(vec(transpose(data)), context, size(data))
+    PlainMatrix(Vector{Float64}(vec(transpose(data))), context, size(data))
 end
 
 function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
