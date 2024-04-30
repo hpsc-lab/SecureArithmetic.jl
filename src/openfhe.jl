@@ -402,12 +402,12 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
     cc = get_crypto_context(context)
     encoding_parameters = OpenFHE.GetEncodingParams(cc)
     capacity = OpenFHE.GetBatchSize(encoding_parameters)
-    OpenFHE.EvalBootstrapSetup(context.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
+    OpenFHE.EvalBootstrapSetup(context.backend.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
     for i in shifts
         permutation = generate_permutation_matrix(i, size, capacity)
-        permutation_pre = OpenFHE.EvalLinearTransformPrecompute(fheckksrns, cc[],
+        permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
                                                                 Vector{Float64}[eachrow(permutation)...]);
-        context.permutations[i] = permutation_pre
+        context.backend.permutations[i] = permutation_pre
     end
 
     nothing
@@ -640,5 +640,6 @@ function generate_permutation_matrix(shift::Tuple{Int, Int}, size::Tuple{Int, In
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift; wrap_by)
-    OpenFHE.EvalLinearTransform(sm.context.fheckksrns, sm.context.permutations[shift], sm.data)
+    OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns,
+                                sm.context.backend.permutations[shift], sm.data)
 end
