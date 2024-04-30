@@ -195,7 +195,7 @@ end
 ############################################################################################
 # Matrix
 ############################################################################################
-init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
+init_matrix_rotation!(context::SecureContext{<:Unencrypted},
                       shifts::Vector{Tuple{Int, Int}}, size::Tuple{Int, Int}) = nothing
 
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
