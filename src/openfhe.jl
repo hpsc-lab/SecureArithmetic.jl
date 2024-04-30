@@ -404,7 +404,7 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
     capacity = OpenFHE.GetBatchSize(encoding_parameters)
     OpenFHE.EvalBootstrapSetup(context.backend.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
     for i in shifts
-        permutation = generate_permutation_matrix(i, size, capacity)
+        permutation = generate_permutation_matrix(i, size, Int(capacity))
         permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
                                                                 Vector{Float64}[eachrow(permutation)...]);
         context.backend.permutations[i] = permutation_pre
