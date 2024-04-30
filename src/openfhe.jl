@@ -402,7 +402,7 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
     cc = get_crypto_context(context)
     encoding_parameters = OpenFHE.GetEncodingParams(cc)
     capacity = OpenFHE.GetBatchSize(encoding_parameters)
-    OpenFHE.EvalBootstrapSetup(context.fheckksrns, cc[]; level_budget=[1, 1], slots=N);
+    OpenFHE.EvalBootstrapSetup(context.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
     for i in shifts
         permutation = generate_permutation_matrix(i, size, capacity)
         permutation_pre = OpenFHE.EvalLinearTransformPrecompute(fheckksrns, cc[],
