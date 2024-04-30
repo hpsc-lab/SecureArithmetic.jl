@@ -640,6 +640,7 @@ function generate_permutation_matrix(shift::Tuple{Int, Int}, size::Tuple{Int, In
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift; wrap_by)
-    OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns,
-                                sm.context.backend.permutations[shift], sm.data)
+    ciphertext = OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns,
+                                             sm.context.backend.permutations[shift], sm.data)
+    SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
 end
