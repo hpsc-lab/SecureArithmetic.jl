@@ -405,9 +405,10 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
     OpenFHE.EvalBootstrapSetup(context.backend.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
     for i in shifts
         permutation = generate_permutation_matrix(i, size, Int(capacity))
-        permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
-                                                                Vector{Float64}[eachrow(permutation)...]);
-        context.backend.permutations[i] = permutation_pre
+        # permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
+        #                                                         Vector{Float64}[eachrow(permutation)...]);
+        # context.backend.permutations[i] = permutation_pre
+        context.backend.permutations[i] = permutation
     end
 
     nothing
@@ -640,7 +641,11 @@ function generate_permutation_matrix(shift::Tuple{Int, Int}, size::Tuple{Int, In
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift; wrap_by)
-    ciphertext = OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns,
-                                             sm.context.backend.permutations[shift], sm.data)
-    SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
+    context = sm.context
+    cc = get_crypto_context(cc)
+    permutation = context.backend.permutations[shift]
+    permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
+                                                            Vector{Float64}[eachrow(permutation)...]);
+    ciphertext = OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns, permutation_pre, sm.data)
+    SecureMatrix(ciphertext, size(sm), capacity(sm), context)
 end
