@@ -642,7 +642,7 @@ end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift; wrap_by)
     context = sm.context
-    cc = get_crypto_context(cc)
+    cc = get_crypto_context(context)
     permutation = context.backend.permutations[shift]
     permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
                                                             Vector{Float64}[eachrow(permutation)...]);
