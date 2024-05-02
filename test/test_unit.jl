@@ -98,6 +98,14 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_throws ArgumentError circshift(sv_short, 1; wrap_by = :wololo)
             @test circshift(sv_short, 1; wrap_by = :length) isa SecureVector
             @test circshift(sv_short, -2; wrap_by = :length) isa SecureVector
+            @test collect(decrypt(circshift(sv_short, 1; wrap_by = :length), private_key)) ≈
+                [3.0, 1.0, 2.0]
+            @test collect(decrypt(circshift(sv_short, -2; wrap_by = :length), private_key)) ≈
+                [3.0, 1.0, 2.0]
+            @test collect(decrypt(circshift(sv1, 1), private_key)) ≈
+                [5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0]
+            @test collect(decrypt(circshift(sv1, -2), private_key)) ≈
+                [0.75, 1.0, 2.0, 3.0, 4.0, 5.0, 0.25, 0.5]
         end
 
         @testset verbose=true showtiming=true "length" begin
