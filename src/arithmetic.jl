@@ -80,15 +80,11 @@ Base.:*(sm::SecureMatrix, scalar::Real) = multiply(sm, scalar)
 Base.:*(scalar::Real, sm::SecureMatrix) = multiply(sm, scalar)
 
 # Circular shift
-function Base.circshift(sm::SecureMatrix, shift::Tuple{Integer, Integer}; wrap_by = :capacity)
-    if !(wrap_by in (:length, :capacity))
-        throw(ArgumentError("Unsupported value '$wrap_by' passed to `wrap_by` (must be `:length` or `:capacity`)"))
-    end
-
+function Base.circshift(sm::SecureMatrix, shift::Tuple{Integer, Integer})
     if shift == (0,0)
         return sm
     end
 
-    rotate(sm, shift; wrap_by)
+    rotate(sm, shift)
 end
 

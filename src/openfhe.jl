@@ -8,11 +8,6 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref)
 """
 struct OpenFHEBackend{CryptoContextT} <: AbstractCryptoBackend
     crypto_context::CryptoContextT
-    fheckksrns::OpenFHE.FHECKKSRNS
-    permutations
-    function OpenFHEBackend(context::CryptoContextT) where CryptoContextT
-        new{CryptoContextT}(context, OpenFHE.FHECKKSRNS(), Dict())
-    end
 end
 
 """
@@ -398,28 +393,40 @@ function get_crypto_context(m::Union{SecureMatrix{<:OpenFHEBackend},
 end
 
 function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
-                               shifts::Vector{Tuple{Int, Int}}, size::Tuple{Int, Int})
+                               shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
     cc = get_crypto_context(context)
-    encoding_parameters = OpenFHE.GetEncodingParams(cc)
-    capacity = OpenFHE.GetBatchSize(encoding_parameters)
-    OpenFHE.EvalBootstrapSetup(context.backend.fheckksrns, cc[]; level_budget=[1, 1], slots=capacity);
-    for i in shifts
-        permutation = generate_permutation_matrix(i, size, Int(capacity))
-        # permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
-        #                                                         Vector{Float64}[eachrow(permutation)...]);
-        # context.backend.permutations[i] = permutation_pre
-        context.backend.permutations[i] = permutation
+    shifts_1d = []
+    for (i, j) in shifts
+        if j == 0
+            # appropriate shift for matrix packed in a vector
+            shift = [i*shape[2]]
+            # matrix rotations is wrapped by lenght, so additional shift is required
+            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
+        elseif j > 0
+            # appropriate shift for matrix packed in a vector
+            shift = [j+i*shape[2], -(shape[2]-j)+i*shape[2]]
+            # matrix rotations is wrapped by lenght, so additional shift is required
+            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
+        else
+            # appropriate shift for matrix packed in a vector
+            shift = [j+i*shape[2], shape[2]+j+i*shape[2]]
+            # matrix rotations is wrapped by lenght, so additional shift is required
+            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
+        end
+        append!(shifts_1d, shift)
+        append!(shifts_1d, shift_rest)
     end
+    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_1d)
 
     nothing
 end
 
 function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend},
-                     size::Tuple{Int, Int})
+                     shape::Tuple{Int, Int})
     cc = get_crypto_context(context)
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
     capacity = OpenFHE.GetSlots(plaintext)
-    plain_matrix = PlainMatrix(plaintext, size, capacity, context)
+    plain_matrix = PlainMatrix(plaintext, shape, capacity, context)
 
     plain_matrix
 end
@@ -433,13 +440,13 @@ function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
 end
 
 function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
-    print(io, m.size, "-element PlainMatrix{OpenFHEBackend}:\n")
+    print(io, m.shape, "-element PlainMatrix{OpenFHEBackend}:\n")
     Base.print_matrix(io, collect(m))
 end
 
 function Base.collect(plain_matrix::PlainMatrix{<:OpenFHEBackend})
-    n = plain_matrix.size[1]
-    m = plain_matrix.size[2]
+    n = plain_matrix.shape[1]
+    m = plain_matrix.shape[2]
     transpose(reshape(OpenFHE.GetRealPackedValue(plain_matrix.data)[1:n*m], (m, n)))
 end
 
@@ -460,7 +467,7 @@ function encrypt_impl(plain_matrix::PlainMatrix{<:OpenFHEBackend}, public_key::P
     cc = get_crypto_context(context)
     ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_matrix.data)
     capacity = OpenFHE.GetSlots(ciphertext)
-    secure_matrix = SecureMatrix(ciphertext, plain_matrix.size, capacity, context)
+    secure_matrix = SecureMatrix(ciphertext, plain_matrix.shape, capacity, context)
 
     secure_matrix
 end
@@ -593,59 +600,49 @@ function multiply(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
     secure_matrix
 end
 
-function generate_permutation_matrix(shift::Tuple{Int, Int}, size::Tuple{Int, Int}, capacity::Int)
-    matrix = zeros(capacity, capacity)
-    if shift[2] >= 0
-        for i in range(1, size[1])
-            for j in range(1, shift[2])
-                matrix[(i-1)*size[2]+j, i*size[2]+j-shift[2]] = 1
-            end
-            for j in range(shift[2]+1, size[2])
-                matrix[(i-1)*size[2]+j, (i-1)*size[2]+j-shift[2]] = 1
-            end
-        end
-    else
-        for i in range(1, size[1])
-            for j in range(1, size[2]+shift[2])
-                matrix[(i-1)*size[2]+j, (i-1)*size[2]+j-shift[2]] = 1
-            end
-            for j in range(size[2]+shift[2]+1, size[2])
-                matrix[(i-1)*size[2]+j, (i-2)*size[2]+j-shift[2]] = 1
-            end
-        end
-    end
-    if shift[1]>0
-        matrix = circshift(matrix, (shift[1]*size[2]+capacity-size[1]*size[2], 0))
-        # in case of a matrix smaller then capacity, make sure rotation will be circular relative to
-        # the real matrix size
-        if size[1]*size[2] < capacity
-            new_matrix = zeros(capacity, capacity)
-            first = shift[1] * size[2] + 1
-            last = shift[1] * size[2] + capacity - size[1] * size[2]
-            new_matrix[1:size[1]*size[2], 1:end] = matrix[setdiff(1:end, first:last), 1:end]
-            matrix = new_matrix
-        end
-    elseif shift[1]<0
-        matrix = circshift(matrix, (shift[1]*size[2],0))
-        # in case of a matrix smaller then capacity, make sure rotation will be circular relative to
-        # the real matrix size
-        if size[1]*size[2] < capacity
-            new_matrix = zeros(capacity, capacity)
-            first = size[1]*size[2] + shift[1] * size[2] + 1
-            last = capacity + shift[1] * size[2]
-            new_matrix[1:size[1]*size[2], 1:end] = matrix[setdiff(1:end, first:last), 1:end]
-            matrix = new_matrix
-        end
-    end
-    matrix
-end
+function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
+    sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
 
-function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift; wrap_by)
-    context = sm.context
-    cc = get_crypto_context(context)
-    permutation = context.backend.permutations[shift]
-    permutation_pre = OpenFHE.EvalLinearTransformPrecompute(context.backend.fheckksrns, cc[],
-                                                            Vector{Float64}[eachrow(permutation)...]);
-    ciphertext = OpenFHE.EvalLinearTransform(sm.context.backend.fheckksrns, permutation_pre, sm.data)
-    SecureMatrix(ciphertext, size(sm), capacity(sm), context)
+    if shift[2] == 0
+        shift_main = shift[1]*size(sm)[2]
+        sv = circshift(sv, shift_main; wrap_by=:length)
+    elseif shift[2] > 0
+        # mask for main part
+        mask_part = zeros(size(sm)[2])
+        first = 1
+        last = size(sm)[2] - shift[2]
+        mask_part[first:last] .= 1
+        mask = repeat(mask_part, outer=size(sm)[1])
+        shift_main = shift[2] + shift[1] * size(sm)[2]
+        
+        # mask for rest
+        mask_part_rest = zeros(size(sm)[2])
+        first = size(sm)[2] - shift[2] + 1
+        mask_part_rest[first:end] .= 1
+        mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
+        shift_rest = -(size(sm)[2] - shift[2]) + shift[1] * size(sm)[2]
+
+        sv = circshift(sv*mask, shift_main; wrap_by=:length) +
+             circshift(sv*mask_rest, shift_rest; wrap_by=:length)
+    else
+        # mask for main part
+        mask_part = zeros(size(sm)[2])
+        first = -shift[2] + 1
+        mask_part[first:end] .= 1
+        mask = repeat(mask_part, outer=size(sm)[1])
+        shift_main = shift[2] + shift[1] * size(sm)[2]
+        
+        # mask for rest
+        mask_part_rest = zeros(size(sm)[2])
+        first = 1
+        last = -shift[2]
+        mask_part_rest[first:last] .= 1
+        mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
+        shift_rest = size(sm)[2] + shift[2] + shift[1] * size(sm)[2]
+
+        sv = circshift(sv*mask, shift_main; wrap_by=:length) +
+             circshift(sv*mask_rest, shift_rest; wrap_by=:length)
+    end
+    
+    SecureMatrix(sv.data, size(sm), capacity(sm), sm.context)
 end

@@ -120,31 +120,31 @@ end
 
 mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
-    size::Tuple{Int, Int}
+    shape::Tuple{Int, Int}
     capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureMatrix(data, size, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, size, capacity, context)
+    function SecureMatrix(data, shape, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
     end
 end
 
 function Base.show(io::IO, m::SecureMatrix)
-    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(v.size))")
+    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(v.shape))")
 end
 
 struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
-    size::Tuple{Int, Int}
+    shape::Tuple{Int, Int}
     capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainMatrix(data, size, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, size, capacity, context)
+    function PlainMatrix(data, shape, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
     end
 end
 
-Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.size
+Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.shape
 
 capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
@@ -156,4 +156,4 @@ __parameterless_type(T) = Base.typename(T).wrapper
 
 # Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
-                      PublicKey{T}, SecureMatrix{T}}) where T = string(__parameterless_type(T))
+                      PublicKey{T}, SecureMatrix{T}, PlainMatrix{T}}) where T = string(__parameterless_type(T))

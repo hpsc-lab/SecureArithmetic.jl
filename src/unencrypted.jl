@@ -196,19 +196,19 @@ end
 # Matrix
 ############################################################################################
 init_matrix_rotation!(context::SecureContext{<:Unencrypted},
-                      shifts::Vector{Tuple{Int, Int}}, size::Tuple{Int, Int}) = nothing
+                      shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int}) = nothing
 
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
     PlainMatrix(data, size(data), length(data), context)
 end
 
 function Base.show(io::IO, m::PlainMatrix{<:Unencrypted})
-    print(io, m.data[1:m.size[1], 1:m.size[2]])
+    print(io, m.data[1:m.shape[1], 1:m.shape[2]])
 end
 
 function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:Unencrypted})
-    print(io, m.size, "-element PlainMatrix{Unencrypted}:\n")
-    Base.print_matrix(io, m.data[1:m.size[1], 1:m.size[2]])
+    print(io, m.shape, "-element PlainMatrix{Unencrypted}:\n")
+    Base.print_matrix(io, m.data[1:m.shape[1], 1:m.shape[2]])
 end
 
 function Base.collect(m::PlainMatrix{<:Unencrypted})
@@ -298,7 +298,7 @@ function multiply(sm::SecureMatrix{<:Unencrypted}, scalar::Real)
     SecureMatrix(sm.data .* scalar, size(sm), capacity(sm), sm.context)
 end
 
-function rotate(sm::SecureMatrix{<:Unencrypted}, shift; wrap_by)
+function rotate(sm::SecureMatrix{<:Unencrypted}, shift)
     # `wrap_by` can be ignored since here length is always equal to capacity
     SecureMatrix(circshift(sm.data, shift), size(sm), capacity(sm), sm.context)
 end
