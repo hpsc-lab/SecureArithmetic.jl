@@ -392,7 +392,7 @@ function get_crypto_context(m::Union{SecureMatrix{<:OpenFHEBackend},
     get_crypto_context(m.context)
 end
 
-function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
+function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                                shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
     cc = get_crypto_context(context)
     shifts_1d = []
@@ -400,21 +400,24 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend},
         if j == 0
             # appropriate shift for matrix packed in a vector
             shift = [i*shape[2]]
-            # matrix rotations is wrapped by lenght, so additional shift is required
+            # matrix rotations is wrapped by length, so additional shift is required
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
         elseif j > 0
             # appropriate shift for matrix packed in a vector
             shift = [j+i*shape[2], -(shape[2]-j)+i*shape[2]]
-            # matrix rotations is wrapped by lenght, so additional shift is required
+            # matrix rotations is wrapped by length, so additional shift is required
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
         else
             # appropriate shift for matrix packed in a vector
             shift = [j+i*shape[2], shape[2]+j+i*shape[2]]
-            # matrix rotations is wrapped by lenght, so additional shift is required
+            # matrix rotations is wrapped by length, so additional shift is required
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
         end
         append!(shifts_1d, shift)
-        append!(shifts_1d, shift_rest)
+        # rewuired only in case of rotation in i direction
+        if i != 0
+            append!(shifts_1d, shift_rest)
+        end
     end
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_1d)
 
@@ -601,6 +604,7 @@ function multiply(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
+    cc = get_crypto_context(sm)
     sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
 
     if shift[2] == 0
@@ -613,6 +617,7 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
         last = size(sm)[2] - shift[2]
         mask_part[first:last] .= 1
         mask = repeat(mask_part, outer=size(sm)[1])
+        plaintext1 = PlainVector(mask, sm.context)
         shift_main = shift[2] + shift[1] * size(sm)[2]
         
         # mask for rest
@@ -620,16 +625,24 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
         first = size(sm)[2] - shift[2] + 1
         mask_part_rest[first:end] .= 1
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
+        plaintext2 = PlainVector(mask_rest, sm.context)
         shift_rest = -(size(sm)[2] - shift[2]) + shift[1] * size(sm)[2]
 
-        sv = circshift(sv*mask, shift_main; wrap_by=:length) +
-             circshift(sv*mask_rest, shift_rest; wrap_by=:length)
+        # minimize multiplication depth
+        if shift[1] == 0
+            sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
+                 circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
+        else
+            sv = circshift(sv*plaintext1, shift_main; wrap_by=:length) +
+                 circshift(sv*plaintext2, shift_rest; wrap_by=:length)
+        end
     else
         # mask for main part
         mask_part = zeros(size(sm)[2])
         first = -shift[2] + 1
         mask_part[first:end] .= 1
         mask = repeat(mask_part, outer=size(sm)[1])
+        plaintext1 = PlainVector(mask, sm.context)
         shift_main = shift[2] + shift[1] * size(sm)[2]
         
         # mask for rest
@@ -638,11 +651,18 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
         last = -shift[2]
         mask_part_rest[first:last] .= 1
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
+        plaintext2 = PlainVector(mask_rest, sm.context)
         shift_rest = size(sm)[2] + shift[2] + shift[1] * size(sm)[2]
 
-        sv = circshift(sv*mask, shift_main; wrap_by=:length) +
-             circshift(sv*mask_rest, shift_rest; wrap_by=:length)
+        # minimize multiplication depth
+        if shift[1] == 0
+            sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
+                 circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
+        else
+            sv = circshift(sv*plaintext1, shift_main; wrap_by=:length) +
+                 circshift(sv*plaintext2, shift_rest; wrap_by=:length)
+        end
     end
-    
+
     SecureMatrix(sv.data, size(sm), capacity(sm), sm.context)
 end
