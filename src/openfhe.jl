@@ -1,15 +1,47 @@
+"""
+    OpenFHEBackend
+
+Cryptography backend for use with the homomorphic encryption library OpenFHE
+(https://github.com/openfheorg/openfhe-development).
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref)
+"""
 struct OpenFHEBackend{CryptoContextT} <: AbstractCryptoBackend
     crypto_context::CryptoContextT
 end
 
+"""
+    get_crypto_context(context::SecureContext{<:OpenFHEBackend})
+
+Return a `OpenFHE.CryptoContext` object stored in a given `context`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function get_crypto_context(context::SecureContext{<:OpenFHEBackend})
     context.backend.crypto_context
 end
+"""
+    get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
+                                PlainVector{<:OpenFHEBackend}})
+
+Return a `OpenFHE.CryptoContext` object stored in `v`.
+
+See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref),
+[`OpenFHEBackend`](@ref)
+"""
 function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
                                      PlainVector{<:OpenFHEBackend}})
     get_crypto_context(v.context)
 end
 
+"""
+    generate_keys(context::SecureContext{<:OpenFHEBackend})
+
+Generate and return public and private keys.
+
+See also: [`PublicKey`](@ref), [`PrivateKey`](@ref), [`SecureContext`](@ref),
+[`OpenFHEBackend`](@ref)
+"""
 function generate_keys(context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
     keys = OpenFHE.KeyGen(cc)
@@ -19,6 +51,15 @@ function generate_keys(context::SecureContext{<:OpenFHEBackend})
     public_key, private_key
 end
 
+"""
+    init_multiplication!(context::SecureContext{<:OpenFHEBackend},
+                         private_key::PrivateKey)
+
+Generate relinearization key for use with `OpenFHE.EvalMult` using the `private_key`, and
+store it in the given `context`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref)
+"""
 function init_multiplication!(context::SecureContext{<:OpenFHEBackend},
                               private_key::PrivateKey)
     cc = get_crypto_context(context)
@@ -27,6 +68,22 @@ function init_multiplication!(context::SecureContext{<:OpenFHEBackend},
     nothing
 end
 
+"""
+    init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                   shifts)
+
+Generate rotation keys for use with `OpenFHE.EvalRotate` using the `private_key` and for the
+rotation indexes in `shifts`. The keys are stored in the given `context`.
+Positive shift defines rotation to the right, e.g. a rotation with a shift 1:
+[1, 2, 3, 4] -> [4, 1, 2, 3].
+Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
+[1, 2, 3, 4] -> [2, 3, 4, 1].
+
+Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
+OpenFHE.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref)
+"""
 function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                         shifts)
     cc = get_crypto_context(context)
@@ -35,16 +92,37 @@ function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::P
     nothing
 end
 
+"""
+    init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
+                        private_key::PrivateKey)
+
+Generate the necessary keys from `private_key` to enable bootstrapping for a given
+`context`. Supported for CKKS only.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`bootstrap!`](@ref)
+"""
 function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
                              private_key::PrivateKey)
     cc = get_crypto_context(context)
-    ring_dimension = OpenFHE.GetRingDimension(cc)
-    num_slots = div(ring_dimension,  2)
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, num_slots)
+    encoding_parameters = OpenFHE.GetEncodingParams(cc)
+    slots = OpenFHE.GetBatchSize(encoding_parameters)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, slots)
 
     nothing
 end
 
+"""
+    PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend})
+
+Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureVector`](@ref).
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
+"""
 function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend})
     cc = get_crypto_context(context)
     plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
@@ -53,6 +131,18 @@ function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
 
     plain_vector
 end
+
+"""
+    PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
+
+Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureVector`](@ref).
+    
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
+"""
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainVector(convert(Vector{Float64}, data), context)
 end
@@ -66,10 +156,24 @@ function Base.show(io::IO, ::MIME"text/plain", v::PlainVector{<:OpenFHEBackend})
     Base.print_matrix(io, collect(v))
 end
 
+"""
+    collect(v::PlainVector{<:OpenFHEBackend})
+
+Decode and return the real-valued data contained in `v`.
+
+See also: [`PlainVector`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Base.collect(v::PlainVector{<:OpenFHEBackend})
     collect(OpenFHE.GetRealPackedValue(v.data)[1:v.length])
 end
 
+"""
+    level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
+
+Return the number of scalings, referred to as the level, performed over `v`.
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
     Int(OpenFHE.GetLevel(v.data))
 end
@@ -111,11 +215,17 @@ function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
     decrypt!(plain_vector, secure_vector, private_key)
 end
 
+"""
+    bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
+     
+Refresh a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
 
+See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
+"""
 function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
     context = secure_vector.context
     cc = get_crypto_context(context)
-    OpenFHE.EvalBootstrap(cc, secure_vector.data)
+    secure_vector.data = OpenFHE.EvalBootstrap(cc, secure_vector.data)
 
     secure_vector
 end
@@ -236,7 +346,7 @@ function rotate(sv::SecureVector{<:OpenFHEBackend}, shift; wrap_by)
             mask_rotated[first:last] .= 1
         else
             first = abs(shift) + 1
-            last = length(sv) + abs(shift)
+            last = length(sv)
             mask_rotated[first:last] .= 1
         end
         plaintext1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask_rotated)
