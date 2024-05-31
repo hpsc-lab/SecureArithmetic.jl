@@ -433,6 +433,10 @@ function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
     plain_matrix
 end
 
+function PlainMatrix(data::Vector{<:Real}, context::SecureContext, shape::Tuple{Int, Int})
+    PlainMatrix(Vector{Float64}(data), context, shape)
+end
+
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
     PlainMatrix(Vector{Float64}(vec(transpose(data))), context, size(data))
 end

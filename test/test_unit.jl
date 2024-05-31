@@ -45,7 +45,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "init_matrix_rotation!" begin
             @test_nowarn init_matrix_rotation!(context, private_key, [(1, -1), (-1, -1), (1, 1),
-                                                                      (-1, 1), (1, 0)])
+                                                                      (-1, 1), (1, 0)], (4, 2))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
