@@ -437,7 +437,7 @@ function PlainMatrix(data::Vector{<:Real}, context::SecureContext, shape::Tuple{
     PlainMatrix(Vector{Float64}(data), context, shape)
 end
 
-function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainMatrix(Vector{Float64}(vec(transpose(data))), context, size(data))
 end
 
@@ -453,7 +453,8 @@ end
 function Base.collect(plain_matrix::PlainMatrix{<:OpenFHEBackend})
     n = plain_matrix.shape[1]
     m = plain_matrix.shape[2]
-    transpose(reshape(OpenFHE.GetRealPackedValue(plain_matrix.data)[1:n*m], (m, n)))
+    vec = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:n*m]
+    Matrix{Float64}(transpose(reshape(vec, (m, n))))
 end
 
 function level(m::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})

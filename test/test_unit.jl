@@ -174,7 +174,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "collect" begin
             @test collect(pv1) ≈ x1
-            @test collect(pv1) ≈ m1
+            @test collect(pm1) ≈ m1
         end
 
         @testset verbose=true showtiming=true "show" begin

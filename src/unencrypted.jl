@@ -202,6 +202,11 @@ function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted}
     PlainMatrix(data, size(data), length(data), context)
 end
 
+function PlainMatrix(data::Vector{<:Float64}, context::SecureContext{<:Unencrypted},
+                     shape::Tuple{Int, Int})
+    PlainMatrix(Matrix{Float64}(transpose(reshape(data, (shape[2], shape[1])))), context)
+end
+
 function Base.show(io::IO, m::PlainMatrix{<:Unencrypted})
     print(io, m.data[1:m.shape[1], 1:m.shape[2]])
 end

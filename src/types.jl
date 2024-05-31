@@ -131,7 +131,7 @@ mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
 end
 
 function Base.show(io::IO, m::SecureMatrix)
-    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(v.shape))")
+    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.shape))")
 end
 
 struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
