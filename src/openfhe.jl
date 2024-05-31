@@ -392,29 +392,21 @@ end
 ############################################################################################
 
 function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                               shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
+                               shifts_2d::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
     cc = get_crypto_context(context)
     shifts_1d = []
-    for (i, j) in shifts
+    for (i, j) in shifts_2d
+        # appropriate shift for matrix packed in a vector
+        shift = zeros(2)
         if j == 0
-            # appropriate shift for matrix packed in a vector
             shift = [i*shape[2]]
-            # matrix rotations is wrapped by length, so additional shift is required
-            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
-        elseif j > 0
-            # appropriate shift for matrix packed in a vector
-            shift = [j+i*shape[2], -(shape[2]-j)+i*shape[2]]
-            # matrix rotations is wrapped by length, so additional shift is required
-            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
         else
-            # appropriate shift for matrix packed in a vector
-            shift = [j+i*shape[2], shape[2]+j+i*shape[2]]
-            # matrix rotations is wrapped by length, so additional shift is required
-            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
+            shift = [j+i*shape[2], -sign(j)*(shape[2]-abs(j))+i*shape[2]]
         end
         append!(shifts_1d, shift)
-        # required only in case of rotation in i direction
+        # additional shift required in case of rotation in i direction
         if i != 0
+            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
             append!(shifts_1d, shift_rest)
         end
     end
@@ -614,58 +606,38 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
     if shift[2] == 0
         shift_main = shift[1]*size(sm)[2]
         sv = circshift(sv, shift_main; wrap_by=:length)
-    elseif shift[2] > 0
-        # mask for the main part of a single row
-        mask_part = zeros(size(sm)[2])
-        first = 1
-        last = size(sm)[2] - shift[2]
-        mask_part[first:last] .= 1
-        # repeat the mask for each row
-        mask = repeat(mask_part, outer=size(sm)[1])
-        plaintext1 = PlainVector(mask, sm.context)
-        # shift for the main part of the row
-        shift_main = shift[2] + shift[1] * size(sm)[2]
-        
-        # mask for the rest part of a single row
-        mask_part_rest = zeros(size(sm)[2])
-        first = size(sm)[2] - shift[2] + 1
-        mask_part_rest[first:end] .= 1
-        # repeat the mask for each row
-        mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
-        plaintext2 = PlainVector(mask_rest, sm.context)
-        # shift for the rest part of the row
-        shift_rest = -(size(sm)[2] - shift[2]) + shift[1] * size(sm)[2]
-
-        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize a lower
-        # multiplicative depth.
-        if shift[1] == 0
-            sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
-                 circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
-        else
-            sv = circshift(sv*plaintext1, shift_main; wrap_by=:length) +
-                 circshift(sv*plaintext2, shift_rest; wrap_by=:length)
-        end
     else
         # mask for the main part of a single row
         mask_part = zeros(size(sm)[2])
-        first = -shift[2] + 1
-        mask_part[first:end] .= 1
+        if shift[2] > 0
+            first = 1
+            last = size(sm)[2] - shift[2]
+            mask_part[first:last] .= 1
+        else
+            first = -shift[2] + 1
+            mask_part[first:end] .= 1
+        end
         # repeat the mask for each row
         mask = repeat(mask_part, outer=size(sm)[1])
         plaintext1 = PlainVector(mask, sm.context)
         # shift for the main part of the row
         shift_main = shift[2] + shift[1] * size(sm)[2]
-        
+
         # mask for the rest part of a single row
         mask_part_rest = zeros(size(sm)[2])
-        first = 1
-        last = -shift[2]
-        mask_part_rest[first:last] .= 1
+        if shift[2] > 0
+            first = size(sm)[2] - shift[2] + 1
+            mask_part_rest[first:end] .= 1
+        else
+            first = 1
+            last = -shift[2]
+            mask_part_rest[first:last] .= 1
+        end
         # repeat the mask for each row
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
         plaintext2 = PlainVector(mask_rest, sm.context)
         # shift for the rest part of the row
-        shift_rest = size(sm)[2] + shift[2] + shift[1] * size(sm)[2]
+        shift_rest = -sign(shift[2])*(size(sm)[2] - abs(shift[2])) + shift[1] * size(sm)[2]
 
         # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize a lower
         # multiplicative depth.
