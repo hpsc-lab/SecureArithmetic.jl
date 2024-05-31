@@ -11,7 +11,6 @@ function simple_ckks_bootstrapping(context)
     init_multiplication!(context, private_key)
     init_bootstrapping!(context, private_key)
 
-
     x = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
 
     pv = PlainVector(x, context)
