@@ -9,6 +9,7 @@ function simple_real_numbers(context)
     init_multiplication!(context, private_key)
     init_rotation!(context, private_key, [-1, 2])
 
+    
     x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
     x2 = [5.0, 4.0, 3.0, 2.0, 1.0, 0.75, 0.5, 0.25]
 
