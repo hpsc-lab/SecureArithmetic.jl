@@ -22,15 +22,19 @@ function get_crypto_context(context::SecureContext{<:OpenFHEBackend})
 end
 """
     get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
-                                PlainVector{<:OpenFHEBackend}})
+                                PlainVector{<:OpenFHEBackend},
+                                SecureMatrix{<:OpenFHEBackend},
+                                PlainMatrix{<:OpenFHEBackend}})
 
 Return a `OpenFHE.CryptoContext` object stored in `v`.
 
 See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref),
-[`OpenFHEBackend`](@ref)
+[`OpenFHEBackend`](@ref), [`SecureMatrix`](@ref), [`PlainMatrix`](@ref)
 """
 function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
-                                     PlainVector{<:OpenFHEBackend}})
+                                     PlainVector{<:OpenFHEBackend},
+                                     SecureMatrix{<:OpenFHEBackend},
+                                     PlainMatrix{<:OpenFHEBackend}})
     get_crypto_context(v.context)
 end
 
@@ -387,11 +391,6 @@ end
 # Matrix
 ############################################################################################
 
-function get_crypto_context(m::Union{SecureMatrix{<:OpenFHEBackend},
-                             PlainMatrix{<:OpenFHEBackend}})
-    get_crypto_context(m.context)
-end
-
 function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                                shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
     cc = get_crypto_context(context)
@@ -414,7 +413,7 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
         end
         append!(shifts_1d, shift)
-        # rewuired only in case of rotation in i direction
+        # required only in case of rotation in i direction
         if i != 0
             append!(shifts_1d, shift_rest)
         end
@@ -604,31 +603,36 @@ function multiply(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
-    cc = get_crypto_context(sm)
+    # to operate with the data stored in the matrix in the form of a vector
     sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
-
+    # split algorithm in several cases depending on sign of the shift
     if shift[2] == 0
         shift_main = shift[1]*size(sm)[2]
         sv = circshift(sv, shift_main; wrap_by=:length)
     elseif shift[2] > 0
-        # mask for main part
+        # mask for the main part of a single row
         mask_part = zeros(size(sm)[2])
         first = 1
         last = size(sm)[2] - shift[2]
         mask_part[first:last] .= 1
+        # repeat the mask for each row
         mask = repeat(mask_part, outer=size(sm)[1])
         plaintext1 = PlainVector(mask, sm.context)
+        # shift for the main part of the row
         shift_main = shift[2] + shift[1] * size(sm)[2]
         
-        # mask for rest
+        # mask for the rest part of a single row
         mask_part_rest = zeros(size(sm)[2])
         first = size(sm)[2] - shift[2] + 1
         mask_part_rest[first:end] .= 1
+        # repeat the mask for each row
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
         plaintext2 = PlainVector(mask_rest, sm.context)
+        # shift for the rest part of the row
         shift_rest = -(size(sm)[2] - shift[2]) + shift[1] * size(sm)[2]
 
-        # minimize multiplication depth
+        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize a lower
+        # multiplicative depth.
         if shift[1] == 0
             sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
                  circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
@@ -637,24 +641,29 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
                  circshift(sv*plaintext2, shift_rest; wrap_by=:length)
         end
     else
-        # mask for main part
+        # mask for the main part of a single row
         mask_part = zeros(size(sm)[2])
         first = -shift[2] + 1
         mask_part[first:end] .= 1
+        # repeat the mask for each row
         mask = repeat(mask_part, outer=size(sm)[1])
         plaintext1 = PlainVector(mask, sm.context)
+        # shift for the main part of the row
         shift_main = shift[2] + shift[1] * size(sm)[2]
         
-        # mask for rest
+        # mask for the rest part of a single row
         mask_part_rest = zeros(size(sm)[2])
         first = 1
         last = -shift[2]
         mask_part_rest[first:last] .= 1
+        # repeat the mask for each row
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
         plaintext2 = PlainVector(mask_rest, sm.context)
+        # shift for the rest part of the row
         shift_rest = size(sm)[2] + shift[2] + shift[1] * size(sm)[2]
 
-        # minimize multiplication depth
+        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize a lower
+        # multiplicative depth.
         if shift[1] == 0
             sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
                  circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)

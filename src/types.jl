@@ -124,7 +124,8 @@ mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureMatrix(data, shape, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+    function SecureMatrix(data, shape, capacity,
+                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
         new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
     end
 end
@@ -139,7 +140,8 @@ struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainMatrix(data, shape, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
+    function PlainMatrix(data, shape, capacity,
+                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
         new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
     end
 end
@@ -156,4 +158,5 @@ __parameterless_type(T) = Base.typename(T).wrapper
 
 # Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
-                      PublicKey{T}, SecureMatrix{T}, PlainMatrix{T}}) where T = string(__parameterless_type(T))
+                      PublicKey{T}, SecureMatrix{T},
+                      PlainMatrix{T}}) where T = string(__parameterless_type(T))
