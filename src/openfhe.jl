@@ -29,7 +29,7 @@ end
 Return a `OpenFHE.CryptoContext` object stored in `v`.
 
 See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref),
-[`OpenFHEBackend`](@ref), [`SecureMatrix`](@ref), [`PlainMatrix`](@ref)
+[`OpenFHEBackend`](@ref)
 """
 function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
                                      PlainVector{<:OpenFHEBackend},
@@ -446,7 +446,7 @@ function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
 end
 
 function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
-    print(io, m.shape, "-element PlainMatrix{OpenFHEBackend}:\n")
+    print(io, m.shape, "-shaped PlainMatrix{OpenFHEBackend}:\n")
     Base.print_matrix(io, collect(m))
 end
 

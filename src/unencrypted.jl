@@ -212,7 +212,7 @@ function Base.show(io::IO, m::PlainMatrix{<:Unencrypted})
 end
 
 function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:Unencrypted})
-    print(io, m.shape, "-element PlainMatrix{Unencrypted}:\n")
+    print(io, m.shape, "-shaped PlainMatrix{Unencrypted}:\n")
     Base.print_matrix(io, m.data[1:m.shape[1], 1:m.shape[2]])
 end
 

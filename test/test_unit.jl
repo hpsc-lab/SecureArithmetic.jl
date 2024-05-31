@@ -44,8 +44,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         end
 
         @testset verbose=true showtiming=true "init_matrix_rotation!" begin
-            @test_nowarn init_matrix_rotation!(context, private_key, [(1, -1), (-1, -1), (1, 1),
-                                                                      (-1, 1), (1, 0)], (4, 2))
+            @test_nowarn init_matrix_rotation!(context, private_key, [(1, -1), (0, -1), (1, 1),
+                                                                      (0, 1), (1, 0)], (4, 2))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -143,9 +143,10 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                 [0.75, 1.0, 2.0, 3.0, 4.0, 5.0, 0.25, 0.5]
             @test collect(decrypt(circshift(sm1, (1, -1)), private_key)) ≈ circshift(m1, (1, -1))
             @test collect(decrypt(circshift(sm1, (1, 1)), private_key)) ≈ circshift(m1, (1, 1))
-            @test collect(decrypt(circshift(sm1, (-1, -1)), private_key)) ≈ circshift(m1, (-1, -1))
-            @test collect(decrypt(circshift(sm1, (-1, 1)), private_key)) ≈ circshift(m1, (-1, 1))
+            @test collect(decrypt(circshift(sm1, (0, -1)), private_key)) ≈ circshift(m1, (0, -1))
+            @test collect(decrypt(circshift(sm1, (0, 1)), private_key)) ≈ circshift(m1, (0, 1))
             @test collect(decrypt(circshift(sm1, (1, 0)), private_key)) ≈ circshift(m1, (1, 0))
+            @test collect(decrypt(circshift(sm1, (0, 0)), private_key)) ≈ m1
         end
 
         @testset verbose=true showtiming=true "length" begin

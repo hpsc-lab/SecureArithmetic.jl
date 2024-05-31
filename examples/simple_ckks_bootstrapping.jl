@@ -11,10 +11,11 @@ function simple_ckks_bootstrapping(context)
     init_multiplication!(context, private_key)
     init_bootstrapping!(context, private_key)
 
+
     x = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
 
     pv = PlainVector(x, context)
-    println("Input: ", pv)
+    println("Input vector: ", pv)
 
     sv = encrypt(pv, public_key)
 
@@ -23,7 +24,22 @@ function simple_ckks_bootstrapping(context)
     sv_after = bootstrap!(sv)
 
     result = decrypt(sv, private_key)
-    println("Output after bootstrapping \n\t", result)
+    println("Output vector after bootstrapping \n\t", result)
+
+    ################################################################################    
+    m = [0.25 0.5 0.75; 1.0 2.0 3.0; 4.0 5.0 6.0]
+
+    pm = PlainMatrix(m, context)
+    println("Input matrix: ", pm)
+
+    sm = encrypt(pm, public_key)
+
+    # Perform the bootstrapping operation over a matrix. The goal is to increase the number of
+    # levels remaining for HE computation.
+    sm_after = bootstrap!(sm)
+
+    result = decrypt(sm, private_key)
+    println("Output matrix after bootstrapping \n\t", result)
 end
 
 
