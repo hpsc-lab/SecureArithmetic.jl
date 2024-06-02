@@ -202,9 +202,10 @@ function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted}
     PlainMatrix(data, size(data), length(data), context)
 end
 
-function PlainMatrix(data::Vector{<:Float64}, context::SecureContext{<:Unencrypted},
+function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
                      shape::Tuple{Int, Int})
-    PlainMatrix(Matrix{Float64}(transpose(reshape(data, (shape[2], shape[1])))), context)
+    reshaped_data = Matrix(transpose(reshape(data, (shape[2], shape[1]))))
+    PlainMatrix(reshaped_data, context)
 end
 
 function Base.show(io::IO, m::PlainMatrix{<:Unencrypted})
@@ -304,6 +305,5 @@ function multiply(sm::SecureMatrix{<:Unencrypted}, scalar::Real)
 end
 
 function rotate(sm::SecureMatrix{<:Unencrypted}, shift)
-    # `wrap_by` can be ignored since here length is always equal to capacity
     SecureMatrix(circshift(sm.data, shift), size(sm), capacity(sm), sm.context)
 end

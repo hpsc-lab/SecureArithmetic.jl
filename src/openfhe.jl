@@ -399,7 +399,7 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
         # minimum required shift
         i %= shape[1]
         j %= shape[2] 
-        # appropriate shift for matrix packed in a vector
+        # appropriate shift for matrix packed in vector
         shift = []
         if j == 0
             if i != 0
@@ -430,7 +430,8 @@ function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBack
     plain_matrix
 end
 
-function PlainMatrix(data::Vector{<:Real}, context::SecureContext, shape::Tuple{Int, Int})
+function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend},
+                     shape::Tuple{Int, Int})
     PlainMatrix(Vector{Float64}(data), context, shape)
 end
 
@@ -605,16 +606,16 @@ function multiply(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
 end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
-    # to operate with the data stored in the matrix in the form of a vector
+    # operate with data stored in matrix in form of vector
     sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
     # minimum required shift
     shift = shift .% size(sm)
-    # split algorithm in several cases depending on sign of the shift
+    # split algorithm in several cases depending on shift
     if shift[2] == 0
         shift_main = shift[1]*size(sm)[2]
         sv = circshift(sv, shift_main; wrap_by=:length)
     else
-        # mask for the main part of a single row
+        # mask for main part of single row
         mask_part = zeros(size(sm)[2])
         if shift[2] > 0
             first = 1
@@ -624,13 +625,13 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
             first = -shift[2] + 1
             mask_part[first:end] .= 1
         end
-        # repeat the mask for each row
+        # repeat mask for each row
         mask = repeat(mask_part, outer=size(sm)[1])
         plaintext1 = PlainVector(mask, sm.context)
-        # shift for the main part of the row
+        # shift for main part
         shift_main = shift[2] + shift[1] * size(sm)[2]
 
-        # mask for the rest part of a single row
+        # mask for rest part of single row
         mask_part_rest = zeros(size(sm)[2])
         if shift[2] > 0
             first = size(sm)[2] - shift[2] + 1
@@ -640,13 +641,13 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
             last = -shift[2]
             mask_part_rest[first:last] .= 1
         end
-        # repeat the mask for each row
+        # repeat mask for each row
         mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
         plaintext2 = PlainVector(mask_rest, sm.context)
-        # shift for the rest part of the row
+        # shift for rest part
         shift_rest = -sign(shift[2])*(size(sm)[2] - abs(shift[2])) + shift[1] * size(sm)[2]
 
-        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize a lower
+        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize lower
         # multiplicative depth.
         if shift[1] == 0
             sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
