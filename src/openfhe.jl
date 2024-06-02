@@ -396,10 +396,15 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
     cc = get_crypto_context(context)
     shifts_1d = []
     for (i, j) in shifts_2d
+        # minimum required shift
+        i %= shape[1]
+        j %= shape[2] 
         # appropriate shift for matrix packed in a vector
-        shift = zeros(2)
+        shift = []
         if j == 0
-            shift = [i*shape[2]]
+            if i != 0
+                shift = [i*shape[2]]
+            end
         else
             shift = [j+i*shape[2], -sign(j)*(shape[2]-abs(j))+i*shape[2]]
         end
@@ -602,6 +607,8 @@ end
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
     # to operate with the data stored in the matrix in the form of a vector
     sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
+    # minimum required shift
+    shift = shift .% size(sm)
     # split algorithm in several cases depending on sign of the shift
     if shift[2] == 0
         shift_main = shift[1]*size(sm)[2]
