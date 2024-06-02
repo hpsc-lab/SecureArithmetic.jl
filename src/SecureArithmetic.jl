@@ -17,7 +17,7 @@ export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!,
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects
-export level, capacity, size
+export level, capacity
 
 include("types.jl")
 include("operations.jl")

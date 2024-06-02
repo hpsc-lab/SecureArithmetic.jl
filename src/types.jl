@@ -149,6 +149,7 @@ struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
 end
 
 Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.shape
+Base.size(m::Union{PlainMatrix, SecureMatrix}, d::Int) = m.shape[d]
 
 capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
