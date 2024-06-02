@@ -81,7 +81,7 @@ Base.:*(scalar::Real, sm::SecureMatrix) = multiply(sm, scalar)
 
 # Circular shift
 function Base.circshift(sm::SecureMatrix, shift::Tuple{Integer, Integer})
-    if shift == (0,0)
+    if shift[1] % size(sm, 1) == 0 && shift[2] % size(sm, 2) == 0
         return sm
     end
 

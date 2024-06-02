@@ -118,6 +118,7 @@ function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
+# Here `capacity` needs to be large enough to hold at least `prod(shape)` elements
 mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     shape::Tuple{Int, Int}
@@ -134,6 +135,7 @@ function Base.show(io::IO, m::SecureMatrix)
     print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.shape))")
 end
 
+# Here `capacity` needs to be large enough to hold at least `prod(shape)` elements
 struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
     data::DataT
     shape::Tuple{Int, Int}

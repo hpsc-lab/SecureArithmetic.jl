@@ -50,8 +50,14 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
         x2 = [5.0, 4.0, 3.0, 2.0, 1.0, 0.75, 0.5, 0.25]
-        m1 = [0.25 0.5; 0.75 1.0; 2.0 3.0; 4.0 5.0]
-        m2 = [5.0 4.0; 3.0 2.0; 1.0 0.75; 0.5 0.25]
+        m1 = [0.25 0.5;
+              0.75 1.0;
+              2.0 3.0;
+              4.0 5.0]
+        m2 = [5.0 4.0;
+              3.0 2.0;
+              1.0 0.75;
+              0.5 0.25]
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
