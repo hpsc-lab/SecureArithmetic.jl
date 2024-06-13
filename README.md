@@ -94,9 +94,8 @@ If you use SecureArithmetic.jl in your own research, please cite this repository
 
 
 ## Authors
-SecureArithmetic.jl was initiated by [Michael Schlottke-Lakemper](https://lakemper.eu) (RWTH
-Aachen University/High-Performance Computing Center Stuttgart (HLRS), Germany), who is also
-its principal maintainer.
+SecureArithmetic.jl was initiated by [Michael Schlottke-Lakemper](https://www.uni-augsburg.de/fakultaet/mntf/math/prof/hpsc)
+(University of Augsburg, Germany), who is also its principal maintainer.
 
 
 ## License and contributing
