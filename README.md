@@ -2,15 +2,15 @@
 
 [![Docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://securearithmetic-jl.lakemper.eu/stable)
 [![Docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://securearithmetic-jl.lakemper.eu/dev)
-[![Build Status](https://github.com/sloede/SecureArithmetic.jl/workflows/CI/badge.svg)](https://github.com/sloede/SecureArithmetic.jl/actions?query=workflow%3ACI)
-[![Coveralls](https://coveralls.io/repos/github/sloede/SecureArithmetic.jl/badge.svg)](https://coveralls.io/github/sloede/SecureArithmetic.jl)
-[![Codecov](https://codecov.io/gh/sloede/SecureArithmetic.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sloede/SecureArithmetic.jl)
+[![Build Status](https://github.com/hpsc-lab/SecureArithmetic.jl/workflows/CI/badge.svg)](https://github.com/hpsc-lab/SecureArithmetic.jl/actions?query=workflow%3ACI)
+[![Coveralls](https://coveralls.io/repos/github/hpsc-lab/SecureArithmetic.jl/badge.svg)](https://coveralls.io/github/hpsc-lab/SecureArithmetic.jl)
+[![Codecov](https://codecov.io/gh/hpsc-lab/SecureArithmetic.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/hpsc-lab/SecureArithmetic.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/license/mit/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10544790.svg)](https://doi.org/10.5281/zenodo.10544790)
 
 SecureArithmetic.jl is a Julia package for performing cryptographically secure arithmetic
 operations using fully homomorphic encryption. It currently provides a backend for
-OpenFHE-secured computations using [OpenFHE.jl](https://github.com/sloede/OpenFHE.jl), and
+OpenFHE-secured computations using [OpenFHE.jl](https://github.com/hpsc-lab/OpenFHE.jl), and
 an unencrypted backend for fast verification of a computation pipeline.
 
 
@@ -19,7 +19,7 @@ an unencrypted backend for fast verification of a computation pipeline.
 ### Prerequisites
 If you have not yet installed Julia, please [follow the instructions for your
 operating system](https://julialang.org/downloads/platform/).
-[SecureArithmetic.jl](https://github.com/sloede/SecureArithmetic.jl) works with Julia v1.8
+[SecureArithmetic.jl](https://github.com/hpsc-lab/SecureArithmetic.jl) works with Julia v1.8
 and later on Linux and macOS platforms, and with Julia v1.9 or later on Windows platforms.
 
 ### Installation
@@ -29,7 +29,7 @@ the following commands in the Julia REPL:
 julia> import Pkg; Pkg.add("SecureArithmetic")
 ```
 If you plan on running the examples in the
-[`examples`](https://github.com/sloede/SecureArithmetic.jl/tree/main/examples) directory,
+[`examples`](https://github.com/hpsc-lab/SecureArithmetic.jl/tree/main/examples) directory,
 you also need to install OpenFHE.jl:
 ```julia
 julia> import Pkg; Pkg.add("OpenFHE")
@@ -37,7 +37,7 @@ julia> import Pkg; Pkg.add("OpenFHE")
 
 ### Usage
 The easiest way to get started is to run one of the examples from the
-[`examples`](https://github.com/sloede/SecureArithmetic.jl/tree/main/examples) directory by
+[`examples`](https://github.com/hpsc-lab/SecureArithmetic.jl/tree/main/examples) directory by
 `include`ing them in Julia, e.g.,
 ```julia
 julia> using SecureArithmetic
@@ -87,7 +87,7 @@ If you use SecureArithmetic.jl in your own research, please cite this repository
   title={{S}ecure{A}rithmetic.jl: {S}ecure arithmetic operations in {J}ulia using fully homomorphic encryption},
   author={Schlottke-Lakemper, Michael},
   year={2024},
-  howpublished={\url{https://github.com/sloede/SecureArithmetic.jl}},
+  howpublished={\url{https://github.com/hpsc-lab/SecureArithmetic.jl}},
   doi={10.5281/zenodo.10544790}
 }
 ```
