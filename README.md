@@ -1,7 +1,7 @@
 # SecureArithmetic.jl
 
-[![Docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://securearithmetic-jl.lakemper.eu/stable)
-[![Docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://securearithmetic-jl.lakemper.eu/dev)
+[![Docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://hpsc-lab.github.io/SecureArithmetic.jl/stable)
+[![Docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://hpsc-lab.github.io/SecureArithmetic.jl/dev)
 [![Build Status](https://github.com/hpsc-lab/SecureArithmetic.jl/workflows/CI/badge.svg)](https://github.com/hpsc-lab/SecureArithmetic.jl/actions?query=workflow%3ACI)
 [![Coveralls](https://coveralls.io/repos/github/hpsc-lab/SecureArithmetic.jl/badge.svg)](https://coveralls.io/github/hpsc-lab/SecureArithmetic.jl)
 [![Codecov](https://codecov.io/gh/hpsc-lab/SecureArithmetic.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/hpsc-lab/SecureArithmetic.jl)
