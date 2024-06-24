@@ -391,33 +391,48 @@ end
 # Matrix
 ############################################################################################
 
+"""
+    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                          shifts, shape)
+
+Generate rotation keys for matrix rotation with `OpenFHE.EvalRotate` using the `private_key` and for the
+rotation indexes in `shifts`. `shifts` is a vector of pair values. The keys are stored in the given
+`context`. Positive shift defines rotation to the right/top, e.g. a rotation with a shift (1, 0):
+[1 2 3; 4 5 6; 7 8 9] -> [7 8 9; 1 2 3; 4 5 6].
+Negative shift defines rotation to the left, e.g. a rotation with a shift (0, 1):
+[1 2 3; 4 5 6; 7 8 9] -> [3 1 2; 6 4 5; 9 7 8].
+"""
 function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                               shifts_2d::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int})
+                               shifts, shape)
     cc = get_crypto_context(context)
-    shifts_1d = []
-    for (i, j) in shifts_2d
+    shifts_ = []
+    for (shift_row, shift_col) in shifts
         # minimum required shift
-        i %= shape[1]
-        j %= shape[2] 
+        shift_row %= shape[1]
+        shift_col %= shape[2] 
         # appropriate shift for matrix packed in vector
         shift = []
-        if i == 0
-            if j != 0
-                shift = [j*shape[1]]
+        if shift_row == 0
+            if shift_col != 0
+                shift = [shift_col*shape[1]]
             end
         else
-            shift = [i+j*shape[1], -sign(i)*(shape[1]-abs(i))+j*shape[1]]
+            shift = [shift_row+shift_col*shape[1], -sign(shift_row)*(shape[1]-abs(shift_row))+shift_col*shape[1]]
         end
-        append!(shifts_1d, shift)
-        # additional shift required in case of rotation in j direction
-        if j != 0
+        append!(shifts_, shift)
+        # additional shift required in case of rotation in shift_col direction
+        if shift_col != 0
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
-            append!(shifts_1d, shift_rest)
+            append!(shifts_, shift_rest)
         end
     end
-    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_1d)
+    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_)
 
     nothing
+end
+function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key,
+                               shifts::Tuple{<:Integer, <:Integer}, shape)
+    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, [shifts], shape)
 end
 
 function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend},
@@ -449,8 +464,8 @@ function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
 end
 
 function Base.collect(plain_matrix::PlainMatrix{<:OpenFHEBackend})
-    vec = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:length(plain_matrix)]
-    Matrix{Float64}(reshape(vec, plain_matrix.shape))
+    data = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:length(plain_matrix)]
+    Matrix{Float64}(reshape(data, plain_matrix.shape))
 end
 
 function level(m::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})
