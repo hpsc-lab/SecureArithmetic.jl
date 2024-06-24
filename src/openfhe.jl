@@ -430,9 +430,9 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
 
     nothing
 end
-function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key,
-                               shifts::Tuple{<:Integer, <:Integer}, shape)
-    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, [shifts], shape)
+function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                               shift::Tuple{<:Integer, <:Integer}, shape)
+    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, [shift], shape)
 end
 
 function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend},

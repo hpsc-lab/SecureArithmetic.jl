@@ -196,7 +196,7 @@ end
 # Matrix
 ############################################################################################
 init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                      shifts::Vector{Tuple{Int, Int}}, shape::Tuple{Int, Int}) = nothing
+                      shifts, shape) = nothing
 
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
     PlainMatrix(data, size(data), length(data), context)
