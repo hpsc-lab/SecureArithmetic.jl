@@ -19,7 +19,7 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     # Point to source file
     println(io, """
     ```@meta
-    EditURL = "https://github.com/sloede/SecureArithmetic.jl/blob/main/README.md"
+    EditURL = "https://github.com/hpsc-lab/SecureArithmetic.jl/blob/main/README.md"
     ```
     """)
     # Write the modified contents
@@ -33,7 +33,7 @@ open(joinpath(@__DIR__, "src", "license.md"), "w") do io
     # Point to source file
     println(io, """
     ```@meta
-    EditURL = "https://github.com/sloede/SecureArithmetic/blob/main/LICENSE.md"
+    EditURL = "https://github.com/hpsc-lab/SecureArithmetic.jl/blob/main/LICENSE.md"
     ```
     """)
     # Write the modified contents
@@ -55,7 +55,7 @@ makedocs(
         # Disable pretty URLs during manual testing
         prettyurls = get(ENV, "CI", nothing) == "true",
         # Set canonical URL to GitHub pages URL
-        canonical = "https://securearithmetic-jl.lakemper.eu/stable"
+        canonical = "https://hpsc-lab.github.io/SecureArithmetic.jl/stable"
     ),
     # Explicitly specify documentation structure
     pages = [
@@ -67,7 +67,7 @@ makedocs(
 
 
 deploydocs(;
-    repo = "github.com/sloede/SecureArithmetic.jl",
+    repo = "github.com/hpsc-lab/SecureArithmetic.jl",
     devbranch = "main",
     push_preview = true
 )
