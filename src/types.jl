@@ -151,6 +151,8 @@ end
 Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.shape
 Base.size(m::Union{PlainMatrix, SecureMatrix}, d::Int) = m.shape[d]
 
+Base.length(m::Union{PlainMatrix, SecureMatrix}) = prod(m.shape)
+
 capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
 # Get wrapper name of a potentially parametric type

@@ -401,16 +401,16 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
         j %= shape[2] 
         # appropriate shift for matrix packed in vector
         shift = []
-        if j == 0
-            if i != 0
-                shift = [i*shape[2]]
+        if i == 0
+            if j != 0
+                shift = [j*shape[1]]
             end
         else
-            shift = [j+i*shape[2], -sign(j)*(shape[2]-abs(j))+i*shape[2]]
+            shift = [i+j*shape[1], -sign(i)*(shape[1]-abs(i))+j*shape[1]]
         end
         append!(shifts_1d, shift)
-        # additional shift required in case of rotation in i direction
-        if i != 0
+        # additional shift required in case of rotation in j direction
+        if j != 0
             shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
             append!(shifts_1d, shift_rest)
         end
@@ -436,7 +436,7 @@ function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBacke
 end
 
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
-    PlainMatrix(Vector{Float64}(vec(transpose(data))), context, size(data))
+    PlainMatrix(Vector{Float64}(vec(data)), context, size(data))
 end
 
 function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
@@ -449,10 +449,8 @@ function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
 end
 
 function Base.collect(plain_matrix::PlainMatrix{<:OpenFHEBackend})
-    n = plain_matrix.shape[1]
-    m = plain_matrix.shape[2]
-    vec = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:n*m]
-    Matrix{Float64}(transpose(reshape(vec, (m, n))))
+    vec = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:length(plain_matrix)]
+    Matrix{Float64}(reshape(vec, plain_matrix.shape))
 end
 
 function level(m::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})
@@ -607,49 +605,49 @@ end
 
 function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
     # operate with data stored in matrix in form of vector
-    sv = SecureVector(sm.data, size(sm)[1] * size(sm)[2], sm.capacity, sm.context)
+    sv = SecureVector(sm.data, length(sm), sm.capacity, sm.context)
     # minimum required shift
     shift = shift .% size(sm)
     # split algorithm in several cases depending on shift
-    if shift[2] == 0
-        shift_main = shift[1]*size(sm)[2]
+    if shift[1] == 0
+        shift_main = shift[2]*size(sm)[1]
         sv = circshift(sv, shift_main; wrap_by=:length)
     else
-        # mask for main part of single row
-        mask_part = zeros(size(sm)[2])
-        if shift[2] > 0
+        # mask for main part of single column
+        mask_part = zeros(size(sm)[1])
+        if shift[1] > 0
             first = 1
-            last = size(sm)[2] - shift[2]
+            last = size(sm)[1] - shift[1]
             mask_part[first:last] .= 1
         else
-            first = -shift[2] + 1
+            first = -shift[1] + 1
             mask_part[first:end] .= 1
         end
-        # repeat mask for each row
-        mask = repeat(mask_part, outer=size(sm)[1])
+        # repeat mask for each column
+        mask = repeat(mask_part, outer=size(sm)[2])
         plaintext1 = PlainVector(mask, sm.context)
         # shift for main part
-        shift_main = shift[2] + shift[1] * size(sm)[2]
+        shift_main = shift[1] + shift[2] * size(sm)[1]
 
-        # mask for rest part of single row
-        mask_part_rest = zeros(size(sm)[2])
-        if shift[2] > 0
-            first = size(sm)[2] - shift[2] + 1
+        # mask for rest part of single column
+        mask_part_rest = zeros(size(sm)[1])
+        if shift[1] > 0
+            first = size(sm)[1] - shift[1] + 1
             mask_part_rest[first:end] .= 1
         else
             first = 1
-            last = -shift[2]
+            last = -shift[1]
             mask_part_rest[first:last] .= 1
         end
-        # repeat mask for each row
-        mask_rest = repeat(mask_part_rest, outer=size(sm)[1])
+        # repeat mask for each column
+        mask_rest = repeat(mask_part_rest, outer=size(sm)[2])
         plaintext2 = PlainVector(mask_rest, sm.context)
         # shift for rest part
-        shift_rest = -sign(shift[2])*(size(sm)[2] - abs(shift[2])) + shift[1] * size(sm)[2]
+        shift_rest = -sign(shift[1])*(size(sm)[1] - abs(shift[1])) + shift[2] * size(sm)[1]
 
-        # If shift[1] == 0, it is sufficient to use wrap_by=:capacity to utilize lower
+        # If shift[2] == 0, it is sufficient to use wrap_by=:capacity to utilize lower
         # multiplicative depth.
-        if shift[1] == 0
+        if shift[2] == 0
             sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
                  circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
         else

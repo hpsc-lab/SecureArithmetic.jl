@@ -204,7 +204,7 @@ end
 
 function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
                      shape::Tuple{Int, Int})
-    reshaped_data = Matrix(transpose(reshape(data, (shape[2], shape[1]))))
+    reshaped_data = Matrix(reshape(data, shape))
     PlainMatrix(reshaped_data, context)
 end
 
