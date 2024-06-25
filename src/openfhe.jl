@@ -408,24 +408,35 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
                                shifts, shape)
     cc = get_crypto_context(context)
     shifts_ = []
+    nrows, ncols = shape
     for (shift_row, shift_col) in shifts
         # minimum required shift
-        shift_row %= shape[1]
-        shift_col %= shape[2] 
+        shift_row %= nrows
+        shift_col %= ncols
         # appropriate shift for matrix packed in vector
         shift = []
         if shift_row == 0 && shift_col != 0
-            shift = [shift_col*shape[1]]
+            # Since the matrix is saved in a vector in column-major order, only one rotation is
+            # required for column shifting. 
+            shift = [shift_col*nrows]
         else
-            shift = [shift_row+shift_col*shape[1], -sign(shift_row)*(shape[1]-abs(shift_row))+shift_col*shape[1]]
+            # In the general case, in addition to column shifting, a shift within each column is
+            # required. Since this shift inside a column must be circular, two rotations
+            # must be performed (similar to the circshift for SecureVector).
+            shift = [shift_row+shift_col*nrows, -sign(shift_row)*(nrows-abs(shift_row))+shift_col*nrows]
         end
         append!(shifts_, shift)
         # additional shift required in case of rotation in shift_col direction
         if shift_col != 0
-            shift_rest = -sign.(shift) .* (shape[1]*shape[2] .- abs.(shift))
+            # Circularity of rotation within a single column was already ensured. The following
+            # shift is necessary to maintain the circularity of column shifting, see circshift for
+            # SecureVector.
+            shift_rest = -sign.(shift) .* (nrows*ncols .- abs.(shift))
             append!(shifts_, shift_rest)
         end
     end
+    # All shifts stored in shifts_ correspond to Base.circshift, but to use with OpenFHE, all shifts
+    # have to be negated.
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_)
 
     nothing
@@ -623,46 +634,48 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
     sv = SecureVector(sm.data, length(sm), sm.capacity, sm.context)
     # minimum required shift
     shift = shift .% size(sm)
+    shift_row, shift_col = shift
+    nrows, ncols = size(sm)
     # split algorithm in several cases depending on shift
-    if shift[1] == 0
-        shift_main = shift[2]*size(sm)[1]
+    if shift_row == 0
+        shift_main = shift_col*nrows
         sv = circshift(sv, shift_main; wrap_by=:length)
     else
         # mask for main part of single column
-        mask_part = zeros(size(sm)[1])
-        if shift[1] > 0
+        mask_part = zeros(nrows)
+        if shift_row > 0
             first = 1
-            last = size(sm)[1] - shift[1]
+            last = nrows - shift_row
             mask_part[first:last] .= 1
         else
-            first = -shift[1] + 1
+            first = -shift_row + 1
             mask_part[first:end] .= 1
         end
         # repeat mask for each column
-        mask = repeat(mask_part, outer=size(sm)[2])
+        mask = repeat(mask_part, outer=ncols)
         plaintext1 = PlainVector(mask, sm.context)
         # shift for main part
-        shift_main = shift[1] + shift[2] * size(sm)[1]
+        shift_main = shift_row + shift_col * nrows
 
         # mask for rest part of single column
-        mask_part_rest = zeros(size(sm)[1])
-        if shift[1] > 0
-            first = size(sm)[1] - shift[1] + 1
+        mask_part_rest = zeros(nrows)
+        if shift_row > 0
+            first = nrows - shift_row + 1
             mask_part_rest[first:end] .= 1
         else
             first = 1
-            last = -shift[1]
+            last = -shift_row
             mask_part_rest[first:last] .= 1
         end
         # repeat mask for each column
-        mask_rest = repeat(mask_part_rest, outer=size(sm)[2])
+        mask_rest = repeat(mask_part_rest, outer=ncols)
         plaintext2 = PlainVector(mask_rest, sm.context)
         # shift for rest part
-        shift_rest = -sign(shift[1])*(size(sm)[1] - abs(shift[1])) + shift[2] * size(sm)[1]
+        shift_rest = -sign(shift_row)*(nrows - abs(shift_row)) + shift_col * nrows
 
-        # If shift[2] == 0, it is sufficient to use wrap_by=:capacity to utilize lower
+        # If shift_col == 0, it is sufficient to use wrap_by=:capacity to utilize lower
         # multiplicative depth.
-        if shift[2] == 0
+        if shift_col == 0
             sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
                  circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
         else
