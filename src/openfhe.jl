@@ -396,10 +396,12 @@ end
                           shifts, shape)
 
 Generate rotation keys for matrix rotation with `OpenFHE.EvalRotate` using the `private_key` and for the
-rotation indexes in `shifts`. `shifts` is a vector of pair values. The keys are stored in the given
-`context`. Positive shift defines rotation to the right/top, e.g. a rotation with a shift (1, 0):
+rotation indexes in `shifts`.
+`shifts` is a pair of integers given as a tuple, or a list of tuples of integers.
+The keys are stored in the given
+`context`. A positive shift defines a rotation to the right/bottom, e.g., a rotation with shift `(1, 0)`:
 [1 2 3; 4 5 6; 7 8 9] -> [7 8 9; 1 2 3; 4 5 6].
-Negative shift defines rotation to the left, e.g. a rotation with a shift (0, 1):
+Negative shifts define rotation to the left/top, e.g., a rotation with a shift `(0, -1)`:
 [1 2 3; 4 5 6; 7 8 9] -> [3 1 2; 6 4 5; 9 7 8].
 """
 function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
@@ -412,10 +414,8 @@ function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private
         shift_col %= shape[2] 
         # appropriate shift for matrix packed in vector
         shift = []
-        if shift_row == 0
-            if shift_col != 0
-                shift = [shift_col*shape[1]]
-            end
+        if shift_row == 0 && shift_col != 0
+            shift = [shift_col*shape[1]]
         else
             shift = [shift_row+shift_col*shape[1], -sign(shift_row)*(shape[1]-abs(shift_row))+shift_col*shape[1]]
         end
