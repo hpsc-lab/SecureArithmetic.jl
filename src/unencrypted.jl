@@ -190,3 +190,120 @@ function rotate(sv::SecureVector{<:Unencrypted}, shift; wrap_by)
     # `wrap_by` can be ignored since here length is always equal to capacity
     SecureVector(circshift(sv.data, shift), length(sv), capacity(sv), sv.context)
 end
+
+
+############################################################################################
+# Matrix
+############################################################################################
+init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                      shifts, shape) = nothing
+
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
+    PlainMatrix(data, size(data), length(data), context)
+end
+
+function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
+                     shape::Tuple{Int, Int})
+    reshaped_data = Matrix(reshape(data, shape))
+    PlainMatrix(reshaped_data, context)
+end
+
+function Base.show(io::IO, m::PlainMatrix{<:Unencrypted})
+    print(io, m.data[1:m.shape[1], 1:m.shape[2]])
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:Unencrypted})
+    print(io, m.shape, "-shaped PlainMatrix{Unencrypted}:\n")
+    Base.print_matrix(io, m.data[1:m.shape[1], 1:m.shape[2]])
+end
+
+function Base.collect(m::PlainMatrix{<:Unencrypted})
+    m.data
+end
+
+function level(m::Union{SecureMatrix{<:Unencrypted}, PlainMatrix{<:Unencrypted}})
+    0
+end
+
+function encrypt_impl(data::Matrix{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:Unencrypted})
+    SecureMatrix(data, size(data), length(data), context)
+end
+
+function encrypt_impl(plain_matrix::PlainMatrix{<:Unencrypted}, public_key::PublicKey)
+    SecureMatrix(plain_matrix.data, size(plain_matrix), capacity(plain_matrix),
+                 plain_matrix.context)
+end
+
+function decrypt_impl!(plain_matrix::PlainMatrix{<:Unencrypted},
+                       secure_matrix::SecureMatrix{<:Unencrypted}, private_key::PrivateKey)
+    plain_matrix.data .= secure_matrix.data
+
+    plain_matrix
+end
+
+function decrypt_impl(secure_matrix::SecureMatrix{<:Unencrypted}, private_key::PrivateKey)
+    plain_matrix = PlainMatrix(similar(secure_matrix.data), size(secure_matrix),
+                               capacity(secure_matrix), secure_matrix.context)
+
+    decrypt!(plain_matrix, secure_matrix, private_key)
+end
+
+bootstrap!(secure_matrix::SecureMatrix{<:Unencrypted}) = secure_matrix
+
+
+############################################################################################
+# Arithmetic operations
+############################################################################################
+
+function add(sm1::SecureMatrix{<:Unencrypted}, sm2::SecureMatrix{<:Unencrypted})
+    SecureMatrix(sm1.data .+ sm2.data, size(sm1), capacity(sm1), sm1.context)
+end
+
+function add(sm::SecureMatrix{<:Unencrypted}, pm::PlainMatrix{<:Unencrypted})
+    SecureMatrix(sm.data .+ pm.data, size(sm), capacity(sm), sm.context)
+end
+
+function add(sm::SecureMatrix{<:Unencrypted}, scalar::Real)
+    SecureMatrix(sm.data .+ scalar, size(sm), capacity(sm), sm.context)
+end
+
+function subtract(sm1::SecureMatrix{<:Unencrypted}, sm2::SecureMatrix{<:Unencrypted})
+    SecureMatrix(sm1.data .- sm2.data, size(sm1), capacity(sm1), sm1.context)
+end
+
+function subtract(sm::SecureMatrix{<:Unencrypted}, pm::PlainMatrix{<:Unencrypted})
+    SecureMatrix(sm.data .- pm.data, size(sm), capacity(sm), sm.context)
+end
+
+function subtract(pm::PlainMatrix{<:Unencrypted}, sm::SecureMatrix{<:Unencrypted})
+    SecureMatrix(pm.data .- sm.data, size(sm), capacity(sm), sm.context)
+end
+
+function subtract(sm::SecureMatrix{<:Unencrypted}, scalar::Real)
+    SecureMatrix(sm.data .- scalar, size(sm), capacity(sm), sm.context)
+end
+
+function subtract(scalar::Real, sm::SecureMatrix{<:Unencrypted})
+    SecureMatrix(scalar .- sm.data, size(sm), capacity(sm), sm.context)
+end
+
+function negate(sm::SecureMatrix{<:Unencrypted})
+    SecureMatrix(-sm.data, size(sm), capacity(sm), sm.context)
+end
+
+function multiply(sm1::SecureMatrix{<:Unencrypted}, sm2::SecureMatrix{<:Unencrypted})
+    SecureMatrix(sm1.data .* sm2.data, size(sm1), capacity(sm1), sm1.context)
+end
+
+function multiply(sm::SecureMatrix{<:Unencrypted}, pm::PlainMatrix{<:Unencrypted})
+    SecureMatrix(sm.data .* pm.data, size(sm), capacity(sm), sm.context)
+end
+
+function multiply(sm::SecureMatrix{<:Unencrypted}, scalar::Real)
+    SecureMatrix(sm.data .* scalar, size(sm), capacity(sm), sm.context)
+end
+
+function rotate(sm::SecureMatrix{<:Unencrypted}, shift)
+    SecureMatrix(circshift(sm.data, shift), size(sm), capacity(sm), sm.context)
+end

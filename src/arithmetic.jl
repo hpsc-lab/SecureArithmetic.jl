@@ -49,3 +49,42 @@ function Base.circshift(sv::SecureVector, shift::Integer; wrap_by = :capacity)
 
     rotate(sv, shift; wrap_by)
 end
+
+
+############################################################################################
+# Matrix
+############################################################################################
+
+# Add
+Base.:+(sm1::SecureMatrix, sm2::SecureMatrix) = add(sm1, sm2)
+Base.:+(sm::SecureMatrix, pm::PlainMatrix) = add(sm, pm)
+Base.:+(pm::PlainMatrix, sm::SecureMatrix) = add(sm, pm)
+Base.:+(sm::SecureMatrix, scalar::Real) = add(sm, scalar)
+Base.:+(scalar::Real, sm::SecureMatrix) = add(sm, scalar)
+
+# Subtract
+Base.:-(sm1::SecureMatrix, sm2::SecureMatrix) = subtract(sm1, sm2)
+Base.:-(sm::SecureMatrix, pm::PlainMatrix) = subtract(sm, pm)
+Base.:-(pm::PlainMatrix, sm::SecureMatrix) = subtract(pm, sm)
+Base.:-(sm::SecureMatrix, scalar::Real) = subtract(sm, scalar)
+Base.:-(scalar::Real, sm::SecureMatrix) = subtract(scalar, sm)
+
+# Negate
+Base.:-(sm::SecureMatrix) = negate(sm)
+
+# Multiply
+Base.:*(sm1::SecureMatrix, sm2::SecureMatrix) = multiply(sm1, sm2)
+Base.:*(sm::SecureMatrix, pm::PlainMatrix) = multiply(sm, pm)
+Base.:*(pm::PlainMatrix, sm::SecureMatrix) = multiply(sm, pm)
+Base.:*(sm::SecureMatrix, scalar::Real) = multiply(sm, scalar)
+Base.:*(scalar::Real, sm::SecureMatrix) = multiply(sm, scalar)
+
+# Circular shift
+function Base.circshift(sm::SecureMatrix, shift::Tuple{Integer, Integer})
+    if shift[1] % size(sm, 1) == 0 && shift[2] % size(sm, 2) == 0
+        return sm
+    end
+
+    rotate(sm, shift)
+end
+

@@ -45,3 +45,20 @@ See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`decrypt!`](@ref)
 function decrypt(secure_vector::SecureVector, private_key::PrivateKey)
     decrypt_impl(secure_vector, private_key)
 end
+
+function encrypt(data::Matrix{<:Real}, public_key::PublicKey, context::SecureContext)
+    encrypt_impl(data, public_key, context)
+end
+
+function encrypt(plain_matrix::PlainMatrix, public_key::PublicKey)
+    encrypt_impl(plain_matrix, public_key)
+end
+
+function decrypt!(plain_matrix::PlainMatrix, secure_matrix::SecureMatrix,
+                  private_key::PrivateKey)
+    decrypt_impl!(plain_matrix, secure_matrix, private_key)
+end
+
+function decrypt(secure_matrix::SecureMatrix, private_key::PrivateKey)
+    decrypt_impl(secure_matrix, private_key)
+end
