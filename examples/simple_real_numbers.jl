@@ -55,6 +55,9 @@ function simple_real_numbers(context)
 
     result_sv_shift2 = decrypt(sv_shift2, private_key)
     println("x1 shifted circularly by 2 = ", result_sv_shift2)
+    
+    # Clean all `OpenFHE.CryptoContext`s and generated keys.
+    cleanup()
 end
 
 

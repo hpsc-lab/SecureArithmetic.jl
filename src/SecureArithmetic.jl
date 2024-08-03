@@ -19,6 +19,9 @@ export encrypt, decrypt, decrypt!, bootstrap!
 # Query crypto objects
 export level, capacity
 
+# Memory management
+export cleanup
+
 include("types.jl")
 include("operations.jl")
 include("openfhe.jl")
