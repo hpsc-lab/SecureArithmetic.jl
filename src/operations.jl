@@ -81,4 +81,6 @@ function cleanup()
     OpenFHE.ClearEvalSumKeys()
     OpenFHE.ClearEvalAutomorphismKeys()
     OpenFHE.ReleaseAllContexts()
+    
+    nothing
 end
