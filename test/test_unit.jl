@@ -214,7 +214,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             println()
         end
 
-        cleanup()
+        release_context_memory()
     end
 end
 

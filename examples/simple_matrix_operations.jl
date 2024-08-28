@@ -69,7 +69,7 @@ function simple_matrix_operations(context)
     println("m1 after bootstrapping \n\t", result_after_bootstrap)
     
     # Clean all `OpenFHE.CryptoContext`s and generated keys.
-    cleanup()
+    release_context_memory()
 end
 
 

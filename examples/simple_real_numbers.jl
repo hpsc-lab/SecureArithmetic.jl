@@ -57,7 +57,7 @@ function simple_real_numbers(context)
     println("x1 shifted circularly by 2 = ", result_sv_shift2)
     
     # Clean all `OpenFHE.CryptoContext`s and generated keys.
-    cleanup()
+    release_context_memory()
 end
 
 

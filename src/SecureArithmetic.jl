@@ -20,7 +20,7 @@ export encrypt, decrypt, decrypt!, bootstrap!
 export level, capacity
 
 # Memory management
-export cleanup
+export release_context_memory
 
 include("types.jl")
 include("operations.jl")
