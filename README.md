@@ -79,6 +79,35 @@ x1 shifted circularly by -1 = [0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0, 0.25]
 x1 shifted circularly by 2 = [4.0, 5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0]
 ```
 
+### Memory issues
+OpenFHE is a memory-optimized C++ library, but these optimizations can cause
+memory issues when transitioning to Julia.
+
+In OpenFHE, large objects like `Ciphertext`, `Plaintext`, and `CryptoContext` are managed using
+`std::shared_ptr`. These objects are not freed until all associated `std::shared_ptr`s are
+destroyed. Although `std::shared_ptr`s are relatively small, Julia's garbage collector doesn't
+always free them automatically. This is because Julia's garbage collector primarily focuses on
+"young" objects during its incremental collections, leaving some `std::shared_ptr`s in memory
+even when they are no longer in use. This can result in significant memory consumption, as a single
+`Ciphertext` object can occupy over 60 MB. Consequently, complex operations may lead to gigabytes
+of memory being lost. The solution is to manually trigger Julia's garbage collector to perform a
+full collection:
+```julia
+GC.gc()
+```
+
+Additionally, OpenFHE optimizes memory usage in C++ by storing evaluation keys and `CryptoContext`s
+in static objects. These objects, being quite large, remain in memory until the Julia REPL is
+closed. To release them while the REPL is still running, you can execute the following function:
+```julia
+release_context_memory()
+```
+
+For more details, please refer to the documentation for [`release_context_memory`](@ref).
+
+By running these commands at appropriate points in your code, you can prevent excessive memory
+usage and ensure efficient memory management when using SecureArithmetic.jl.
+
 
 ## Referencing
 If you use SecureArithmetic.jl in your own research, please cite this repository as follows:
