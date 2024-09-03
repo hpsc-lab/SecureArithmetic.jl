@@ -27,6 +27,7 @@ function simple_ckks_bootstrapping(context)
 
     # Clean all `OpenFHE.CryptoContext`s and generated keys.
     release_context_memory()
+    GC.gc()
 end
 
 

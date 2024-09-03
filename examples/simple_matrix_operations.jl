@@ -70,6 +70,7 @@ function simple_matrix_operations(context)
     
     # Clean all `OpenFHE.CryptoContext`s and generated keys.
     release_context_memory()
+    GC.gc()
 end
 
 

@@ -72,7 +72,8 @@ Release all `OpenFHE.CryptoContext`s and keys for multiplication, rotation, boot
 
 In the source code of OpenFHE C++, all `CryptoContext`s and keys are stored in static objects.
 Without using `release_context_memory`, the memory allocated for these contexts and keys will
-only be freed after restarting the Julia REPL.
+only be freed after restarting the Julia REPL. It is also advisable to call `GC.gc()` after
+a call to `release_context_memory` to clean up all memory on the Julia side.
 
 See also: [`init_multiplication!`](@ref), [`init_rotation!`](@ref), [`init_bootstrapping!`](@ref)
 """

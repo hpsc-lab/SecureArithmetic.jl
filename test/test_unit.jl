@@ -215,6 +215,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         end
 
         release_context_memory()
+        GC.gc()
     end
 end
 
