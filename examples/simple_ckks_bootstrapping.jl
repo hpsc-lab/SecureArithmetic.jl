@@ -24,6 +24,10 @@ function simple_ckks_bootstrapping(context)
 
     result = decrypt(sv, private_key)
     println("Output after bootstrapping \n\t", result)
+
+    # Clean all `OpenFHE.CryptoContext`s and generated keys.
+    release_context_memory()
+    GC.gc()
 end
 
 

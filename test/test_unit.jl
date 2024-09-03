@@ -213,6 +213,9 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn show(stdout, private_key)
             println()
         end
+
+        release_context_memory()
+        GC.gc()
     end
 end
 

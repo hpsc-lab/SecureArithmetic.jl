@@ -62,3 +62,26 @@ end
 function decrypt(secure_matrix::SecureMatrix, private_key::PrivateKey)
     decrypt_impl(secure_matrix, private_key)
 end
+
+"""
+    release_context_memory()
+
+Release all `OpenFHE.CryptoContext`s and keys for multiplication, rotation, bootstrapping and
+`OpenFHE.EvalSum` generated in the functions [`init_multiplication!`](@ref),
+[`init_rotation!`](@ref), [`init_bootstrapping!`](@ref) and `OpenFHE.EvalSumKeyGen`.
+
+In the source code of OpenFHE C++, all `CryptoContext`s and keys are stored in static objects.
+Without using `release_context_memory`, the memory allocated for these contexts and keys will
+only be freed after restarting the Julia REPL. It is also advisable to call `GC.gc()` after
+a call to `release_context_memory` to clean up all memory on the Julia side.
+
+See also: [`init_multiplication!`](@ref), [`init_rotation!`](@ref), [`init_bootstrapping!`](@ref)
+"""
+function release_context_memory()
+    OpenFHE.ClearEvalMultKeys()
+    OpenFHE.ClearEvalSumKeys()
+    OpenFHE.ClearEvalAutomorphismKeys()
+    OpenFHE.ReleaseAllContexts()
+    
+    nothing
+end

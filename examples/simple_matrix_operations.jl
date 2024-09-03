@@ -67,6 +67,10 @@ function simple_matrix_operations(context)
 
     result_after_bootstrap = decrypt(sm_after_bootstrap, private_key)
     println("m1 after bootstrapping \n\t", result_after_bootstrap)
+    
+    # Clean all `OpenFHE.CryptoContext`s and generated keys.
+    release_context_memory()
+    GC.gc()
 end
 
 
