@@ -124,14 +124,16 @@ function decrypt_impl(secure_vector::SecureVector{<:Unencrypted}, private_key::P
 end
 
 """
-    bootstrap!(secure_vector::SecureVector{<:Unencrypted})
+    bootstrap!(secure_vector::SecureVector{<:Unencrypted}, num_iterations = 1,
+               precision = 0)
      
 An empty duplicate of [`bootstrap!`](@ref) for unencrypted data.
 
 See also: [`SecureVector`](@ref), [`Unencrypted`](@ref), [`bootstrap!`](@ref),
 [`init_bootstrapping!`](@ref)
 """
-bootstrap!(secure_vector::SecureVector{<:Unencrypted}) = secure_vector
+bootstrap!(secure_vector::SecureVector{<:Unencrypted}, num_iterations = 1,
+           precision = 0) = secure_vector
 
 
 ############################################################################################

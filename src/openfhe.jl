@@ -220,16 +220,20 @@ function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
 end
 
 """
-    bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
+    bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend}, num_iterations = 1,
+               precision = 0)
      
 Refresh a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
+Please refer to the OpenFHE documentation for details on the arguments `num_iterations` and
+`precision`.
 
 See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
 """
-function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend})
+function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend}, num_iterations = 1,
+                    precision = 0)
     context = secure_vector.context
     cc = get_crypto_context(context)
-    secure_vector.data = OpenFHE.EvalBootstrap(cc, secure_vector.data)
+    secure_vector.data = OpenFHE.EvalBootstrap(cc, secure_vector.data, num_iterations, precision)
 
     secure_vector
 end
