@@ -690,3 +690,113 @@ function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
 
     SecureMatrix(sv.data, size(sm), capacity(sm), sm.context)
 end
+
+
+############################################################################################
+# Array
+############################################################################################
+
+function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                              shifts, shape)
+    # TODO
+end
+function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                              shift::Tuple{<:Integer, <:Integer}, shape)
+    # TODO
+end
+
+function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
+                    shape::Tuple, capacity::Int)
+    cc = get_crypto_context(context)
+    n_vectors = ceil(Int, length(data)/capacity)
+    plaintext_split = OpenFHE.Plaintext[]
+    lengths = Int[]
+    for i in range(1, n_vectors)
+        start = (i-1)*capacity + 1
+        stop = min(i*capacity, length(data))
+        push!(plaintext_split, OpenFHE.MakeCKKSPackedPlaintext(cc, data[start:stop]))
+        push!(lengths, stop - start + 1)
+    end
+    capacity = sum(OpenFHE.GetSlots.(plaintext_split))
+    plain_array = PlainArray(plaintext_split, shape, lengths, capacity, context)
+
+    plain_array
+end
+
+function PlainArray(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend},
+                    shape::Tuple, capacity::Int)
+    PlainArray(Vector{Float64}(data), context, shape, capacity::Int)
+end
+
+function PlainArray(data::Array{Float64}, context::SecureContext{<:OpenFHEBackend}, capacity::Int)
+    PlainArray(Vector{Float64}(vec(data)), context, size(data), capacity::Int)
+end
+
+function Base.show(io::IO, m::PlainArray{<:OpenFHEBackend})
+    print(io, collect(m))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::PlainArray{<:OpenFHEBackend})
+    print(io, m.shape, "-shaped PlainArray{OpenFHEBackend}:\n")
+    Base.print_matrix(io, collect(m))
+end
+
+function Base.collect(plain_array::PlainArray{<:OpenFHEBackend})
+    data = OpenFHE.GetRealPackedValue.(plain_array.data)
+    keepat!.(data, range.(1, plain_array.lengths))
+    data = reduce(vcat, data)
+
+    Array{Float64, length(plain_matrix.shape)}(reshape(data, plain_matrix.shape))
+end
+
+function level(m::Union{SecureArray{<:OpenFHEBackend}, PlainArray{<:OpenFHEBackend}})
+    Int.(OpenFHE.GetLevel.(m.data))
+end
+
+function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:OpenFHEBackend}, capacity::Int)
+    plain_array = PlainArray(data, context, capacity)
+    secure_array = encrypt(plain_array, public_key)
+
+    secure_array
+end
+
+function encrypt_impl(plain_array::PlainArray{<:OpenFHEBackend}, public_key::PublicKey)
+    context = plain_array.context
+    cc = get_crypto_context(context)
+    ciphertext_split = OpenFHE.Encrypt.(cc, public_key.public_key, plain_array.data)
+    capacity = sum(OpenFHE.GetSlots.(ciphertext_split))
+    secure_array = SecureArray(ciphertext_split, plain_matrix.shape, plain_matrix.lengths,
+                               capacity, context)
+
+    secure_array
+end
+
+function decrypt_impl!(plain_array::PlainArray{<:OpenFHEBackend},
+                       secure_array::SecureArray{<:OpenFHEBackend},
+                       private_key::PrivateKey)
+    cc = get_crypto_context(secure_array)
+    OpenFHE.Decrypt.(cc, private_key.private_key, secure_array.data,
+                     plain_array.data)
+
+    plain_array
+end
+
+function decrypt_impl(secure_array::SecureArray{<:OpenFHEBackend},
+                      private_key::PrivateKey)
+    context = secure_array.context
+    plain_array = PlainArray(OpenFHE.Plaintext[], size(secure_array), secure_array.lengths
+                             capacity(secure_array), context)
+
+    decrypt!(plain_array, secure_array, private_key)
+end
+
+function bootstrap!(secure_array::SecureArray{<:OpenFHEBackend})
+    context = secure_array.context
+    cc = get_crypto_context(context)
+    Threads.@threads for i in range(1, length(secure_array.data))
+        secure_array.data[i] = OpenFHE.EvalBootstrap(cc, secure_array.data[i])
+    end
+
+    secure_array
+end

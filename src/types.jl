@@ -155,6 +155,43 @@ Base.length(m::Union{PlainMatrix, SecureMatrix}) = prod(m.shape)
 
 capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
+# SecureArray is used to store data in many CKKSCiphertexts. 
+struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, DataT, N::Int}
+    data::Vector{DataT}
+    shape::Tuple
+    lengths::Vector{Int}
+    capacity::Int
+    context::SecureContext{CryptoBackendT}
+    
+    function SecureArray(data, shape, lengths, capacity,
+                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data[1]), length(shape)}(data, shape, lengths, capacity, context)
+    end
+end
+
+# PlainArray is used to store data in many CKKSPlaintexts.
+struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, DataT, N::Int}
+    data::Vector{DataT}
+    shape::Tuple
+    lengths::Vector{Int}
+    capacity::Int
+    context::SecureContext{CryptoBackendT}
+    
+    function PlainArray(data, shape, lengths, capacity,
+                        context::SecureContext{CryptoBackendT}) where CryptoBackendT
+        new{CryptoBackendT, typeof(data[1]), length(shape)}(data, shape, lengths, capacity, context)
+    end
+end
+
+Base.size(m::Union{PlainArray, SecureArray}) = m.shape
+Base.size(m::Union{PlainArray, SecureArray}, d::Int) = m.shape[d]
+
+Base.length(m::Union{PlainArray, SecureArray}) = prod(m.shape)
+
+Base.ndims(m::Union{PlainArray, SecureArray}) = length(m.shape)
+
+capacity(m::Union{PlainArray, SecureArray}) = m.capacity
+
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
 # Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20

@@ -309,3 +309,64 @@ end
 function rotate(sm::SecureMatrix{<:Unencrypted}, shift)
     SecureMatrix(circshift(sm.data, shift), size(sm), capacity(sm), sm.context)
 end
+
+
+############################################################################################
+# Matrix
+############################################################################################
+
+init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                     shifts, shape) = nothing
+
+function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted}, capacity::Int)
+    PlainArray(data, size(data), [length(data)], length(data), context)
+end
+
+function PlainArray(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
+                    shape::Tuple, capacity::Int)
+    reshaped_data = Array(reshape(data, shape))
+    PlainArray(reshaped_data, context, capacity)
+end
+
+function Base.show(io::IO, m::PlainArray{<:Unencrypted})
+    print(io, m.data)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::PlainArray{<:Unencrypted})
+    print(io, m.shape, "-shaped PlainArray{Unencrypted}:\n")
+    Base.print_matrix(io, m.data)
+end
+
+function Base.collect(m::PlainArray{<:Unencrypted})
+    m.data
+end
+
+function level(m::Union{SecureArray{<:Unencrypted}, PlainArray{<:Unencrypted}})
+    0
+end
+
+function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:Unencrypted}, capacity::Int)
+    SecureArray(data, size(data), [length(data)], length(data), context)
+end
+
+function encrypt_impl(plain_array::PlainArray{<:Unencrypted}, public_key::PublicKey)
+    SecureArray(plain_array.data, size(plain_array), plain_array.lengths, capacity(plain_array),
+                plain_array.context)
+end
+
+function decrypt_impl!(plain_array::PlainArray{<:Unencrypted},
+                       secure_array::SecureArray{<:Unencrypted}, private_key::PrivateKey)
+    plain_array.data .= secure_array.data
+
+    plain_array
+end
+
+function decrypt_impl(secure_array::SecureArray{<:Unencrypted}, private_key::PrivateKey)
+    plain_array = PlainMatrix(similar(secure_array.data), size(secure_array), secure_array.lengths
+                              capacity(secure_array), secure_array.context)
+
+    decrypt!(plain_array, secure_array, private_key)
+end
+
+bootstrap!(secure_array::SecureArray{<:Unencrypted}) = secure_array
