@@ -156,30 +156,30 @@ Base.length(m::Union{PlainMatrix, SecureMatrix}) = prod(m.shape)
 capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
 # SecureArray is used to store data in many CKKSCiphertexts. 
-struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, DataT, N::Int}
+struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N::Int, DataT}
     data::Vector{DataT}
     shape::Tuple
     lengths::Vector{Int}
-    capacity::Int
+    capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
     
-    function SecureArray(data, shape, lengths, capacity,
+    function SecureArray(data, shape, lengths, capacities,
                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data[1]), length(shape)}(data, shape, lengths, capacity, context)
+        new{CryptoBackendT, length(shape), typeof(data[1])}(data, shape, lengths, capacities, context)
     end
 end
 
 # PlainArray is used to store data in many CKKSPlaintexts.
-struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, DataT, N::Int}
+struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N::Int, DataT}
     data::Vector{DataT}
     shape::Tuple
     lengths::Vector{Int}
-    capacity::Int
+    capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
     
-    function PlainArray(data, shape, lengths, capacity,
+    function PlainArray(data, shape, lengths, capacities,
                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data[1]), length(shape)}(data, shape, lengths, capacity, context)
+        new{CryptoBackendT, length(shape), typeof(data[1])}(data, shape, lengths, capacities, context)
     end
 end
 
@@ -190,7 +190,7 @@ Base.length(m::Union{PlainArray, SecureArray}) = prod(m.shape)
 
 Base.ndims(m::Union{PlainArray, SecureArray}) = length(m.shape)
 
-capacity(m::Union{PlainArray, SecureArray}) = m.capacity
+capacity(m::Union{PlainArray, SecureArray}) = sum(m.capacities)
 
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17

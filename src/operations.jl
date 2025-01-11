@@ -64,8 +64,8 @@ function decrypt(secure_matrix::SecureMatrix, private_key::PrivateKey)
 end
 
 
-function encrypt(data::Array{<:Real}, public_key::PublicKey, context::SecureContext, capacity::Int)
-    encrypt_impl(data, public_key, context, capacity)
+function encrypt(data::Array{<:Real}, public_key::PublicKey, context::SecureContext)
+    encrypt_impl(data, public_key, context)
 end
 
 function encrypt(plain_array::PlainArray, public_key::PublicKey)

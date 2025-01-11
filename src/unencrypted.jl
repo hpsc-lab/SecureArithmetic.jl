@@ -312,20 +312,20 @@ end
 
 
 ############################################################################################
-# Matrix
+# Array
 ############################################################################################
 
 init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
                      shifts, shape) = nothing
 
-function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted}, capacity::Int)
-    PlainArray(data, size(data), [length(data)], length(data), context)
+function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
+    PlainArray(data, size(data), [length(data)], [length(data)], context)
 end
 
 function PlainArray(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
-                    shape::Tuple, capacity::Int)
+                    shape::Tuple)
     reshaped_data = Array(reshape(data, shape))
-    PlainArray(reshaped_data, context, capacity)
+    PlainArray(reshaped_data, context)
 end
 
 function Base.show(io::IO, m::PlainArray{<:Unencrypted})
@@ -346,12 +346,12 @@ function level(m::Union{SecureArray{<:Unencrypted}, PlainArray{<:Unencrypted}})
 end
 
 function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
-                      context::SecureContext{<:Unencrypted}, capacity::Int)
-    SecureArray(data, size(data), [length(data)], length(data), context)
+                      context::SecureContext{<:Unencrypted})
+    SecureArray(data, size(data), [length(data)], [length(data)], context)
 end
 
 function encrypt_impl(plain_array::PlainArray{<:Unencrypted}, public_key::PublicKey)
-    SecureArray(plain_array.data, size(plain_array), plain_array.lengths, capacity(plain_array),
+    SecureArray(plain_array.data, size(plain_array), plain_array.lengths, plain_array.capacities,
                 plain_array.context)
 end
 
@@ -363,10 +363,67 @@ function decrypt_impl!(plain_array::PlainArray{<:Unencrypted},
 end
 
 function decrypt_impl(secure_array::SecureArray{<:Unencrypted}, private_key::PrivateKey)
-    plain_array = PlainMatrix(similar(secure_array.data), size(secure_array), secure_array.lengths
-                              capacity(secure_array), secure_array.context)
+    plain_array = PlainMatrix(similar(secure_array.data), size(secure_array), secure_array.lengths,
+                              secure_array.capacities, secure_array.context)
 
     decrypt!(plain_array, secure_array, private_key)
 end
 
 bootstrap!(secure_array::SecureArray{<:Unencrypted}) = secure_array
+
+
+############################################################################################
+# Arithmetic operations
+############################################################################################
+
+function add(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
+    SecureArray(sa1.data .+ sa2.data, sa1.lengths, size(sa1), sa1.capacities, sa1.context)
+end
+
+function add(sa::SecureArray{<:Unencrypted}, pa::PlainArray{<:Unencrypted})
+    SecureArray(sa.data .+ pa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function add(sa::SecureArray{<:Unencrypted}, scalar::Real)
+    SecureArray(sa.data .+ scalar, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function subtract(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
+    SecureArray(sa1.data .- sa2.data, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
+end
+
+function subtract(sa::SecureArray{<:Unencrypted}, pa::PlainArray{<:Unencrypted})
+    SecureArray(sa.data .- pa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function subtract(pa::PlainArray{<:Unencrypted}, sa::SecureArray{<:Unencrypted})
+    SecureArray(pa.data .- sa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function subtract(sa::SecureArray{<:Unencrypted}, scalar::Real)
+    SecureArray(sa.data .- scalar, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function subtract(scalar::Real, sa::SecureArray{<:Unencrypted})
+    SecureArray(scalar .- sa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function negate(sa::SecureArray{<:Unencrypted})
+    SecureArray(-sa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function multiply(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
+    SecureArray(sa1.data .* sa2.data, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
+end
+
+function multiply(sa::SecureArray{<:Unencrypted}, pa::PlainArray{<:Unencrypted})
+    SecureArray(sa.data .* pa.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function multiply(sa::SecureArray{<:Unencrypted}, scalar::Real)
+    SecureArray(sa.data .* scalar, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function rotate(sa::SecureArray{<:Unencrypted}, shift)
+    SecureArray(circshift(sa.data, shift), size(sa), sa.lengths, sa.capacities, sa.context)
+end
