@@ -64,9 +64,9 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
               3.0 2.0;
               1.0 0.75;
               0.5 0.25]
-        a1 = Vector{Float64}(range(1, 30))
-        a2 = Vector{Float64}(range(30, 1, step=-1))
-        a3 = Vector{Float64}(range(1, 32))
+        a1 = Vector{Float64}(range(1, 62))
+        a2 = Vector{Float64}(range(62, 1, step=-1))
+        a3 = Vector{Float64}(range(1, 64))
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
@@ -86,7 +86,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "PlainArray" begin
             @test PlainArray(a1, context) isa PlainArray
-            @test PlainArray(vec(a1), context, (30,)) isa PlainArray
+            @test PlainArray(vec(a1), context, (length(a1),)) isa PlainArray
+            @test PlainArray(Vector(range(1, 30)), context, (30,)) isa PlainArray
         end
 
         pa1 = PlainArray(a1, context)
@@ -209,6 +210,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test size(pm1) == size(m1)
             @test size(sm1) == size(pm1)
             @test size(sa1) == size(pa1)
+            @test size(sa1, 1) == size(pa1, 1)
         end
 
         @testset verbose=true showtiming=true "capacity" begin
@@ -216,8 +218,13 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test capacity(sv1) == 8
             @test capacity(pm1) == 8
             @test capacity(sm1) == 8
-            @test capacity(pa3) == 32
-            @test capacity(sa3) == 32
+            @test capacity(pa3) == 64
+            @test capacity(sa3) == 64
+        end
+        
+
+        @testset verbose=true showtiming=true "ndims" begin
+            @test ndims(sa1) == ndims(pa1)
         end
 
         @testset verbose=true showtiming=true "level" begin
