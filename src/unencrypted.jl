@@ -345,7 +345,7 @@ function level(m::Union{SecureArray{<:Unencrypted}, PlainArray{<:Unencrypted}})
     0
 end
 
-# function is not unique for data::Vector ot data::Matrix
+# function is not unique for data::Vector or data::Matrix
 #=function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
                       context::SecureContext{<:Unencrypted})
     SecureArray(data, size(data), [length(data)], [length(data)], context)

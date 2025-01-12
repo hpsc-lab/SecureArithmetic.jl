@@ -63,7 +63,7 @@ function decrypt(secure_matrix::SecureMatrix, private_key::PrivateKey)
     decrypt_impl(secure_matrix, private_key)
 end
 
-# function is not unique for data::Vector ot data::Matrix
+# function is not unique for data::Vector or data::Matrix
 #=function encrypt(data::Array{<:Real}, public_key::PublicKey, context::SecureContext)
     encrypt_impl(data, public_key, context)
 end=#

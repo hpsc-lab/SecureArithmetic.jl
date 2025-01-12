@@ -733,7 +733,7 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, private_key:
     shifts_ = []
     # iterate over all shifts
     for i in range(1, length(shifts))
-        # convert negative shift to positiv one
+        # convert negative shift to positive one
         if shifts[i] < 0
             shifts[i] = array_length + shifts[i]
         end
@@ -804,7 +804,7 @@ function level(m::Union{SecureArray{<:OpenFHEBackend}, PlainArray{<:OpenFHEBacke
     Int.(OpenFHE.GetLevel.(m.data))
 end
 
-# function is not unique for data::Vector ot data::Matrix
+# function is not unique for data::Vector or data::Matrix
 #=function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
                       context::SecureContext{<:OpenFHEBackend})
     plain_array = PlainArray(data, context)
@@ -1003,7 +1003,7 @@ end
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # minimal required shift
     shift = shift % length(sa)
-    # convert negative shift to positiv one
+    # convert negative shift to positive one
     if shift < 0
         shift = length(sa) + shift
     end
@@ -1024,7 +1024,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     sv = circshift(sv, shift1)
     # shift for individual vectors
     shift2 = shift - vec_capacity * shift1
-    # if the last vector is also full, rotation is simplier
+    # if the last vector is also full, rotation is simpler
     if empty_places == 0
         # shift each vector
         sv = circshift.(sv, shift2, wrap_by=:capacity)
@@ -1099,7 +1099,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
             # if after rotation last element of short vector is already on last place, it needs only first
             # shift2 elements from previous vector
             sv_new[shift1] = circshift(sv, 1)[shift1] * mask1 + sv[shift1] * mask2
-            # due to emty place in new last vector, it has to be rotated
+            # due to empty place in new last vector, it has to be rotated
             sv_new[end] = circshift(sv[end], short_length)
             # all other vectors are without changes
             sv_new[shift1+1:end-1] = sv[shift1+1:end-1]
