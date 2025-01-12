@@ -363,8 +363,8 @@ function decrypt_impl!(plain_array::PlainArray{<:Unencrypted},
 end
 
 function decrypt_impl(secure_array::SecureArray{<:Unencrypted}, private_key::PrivateKey)
-    plain_array = PlainMatrix(similar(secure_array.data), size(secure_array), secure_array.lengths,
-                              secure_array.capacities, secure_array.context)
+    plain_array = PlainArray(similar(secure_array.data), size(secure_array), secure_array.lengths,
+                             secure_array.capacities, secure_array.context)
 
     decrypt!(plain_array, secure_array, private_key)
 end
@@ -377,7 +377,7 @@ bootstrap!(secure_array::SecureArray{<:Unencrypted}) = secure_array
 ############################################################################################
 
 function add(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
-    SecureArray(sa1.data .+ sa2.data, sa1.lengths, size(sa1), sa1.capacities, sa1.context)
+    SecureArray(sa1.data .+ sa2.data, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
 end
 
 function add(sa::SecureArray{<:Unencrypted}, pa::PlainArray{<:Unencrypted})
