@@ -50,8 +50,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         end
 
         @testset verbose=true showtiming=true "init_array_rotation!" begin
-            @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, -15], (30,))
-            @test_nowarn init_array_rotation!(context, private_key, 2, (30,))
+            @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, 7], (30,))
+            @test_nowarn init_array_rotation!(context, private_key, 2, (32,))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -64,9 +64,9 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
               3.0 2.0;
               1.0 0.75;
               0.5 0.25]
-        a1 = Vector{Float64}(range(1, 62))
-        a2 = Vector{Float64}(range(62, 1, step=-1))
-        a3 = Vector{Float64}(range(1, 64))
+        a1 = Vector{Float64}(range(1, 30))
+        a2 = Vector{Float64}(range(30, 1, step=-1))
+        a3 = Vector{Float64}(range(1, 32))
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
@@ -195,9 +195,9 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa1, 1), private_key)) ≈ circshift(a1, 1)
             @test collect(decrypt(circshift(sa1, 10), private_key)) ≈ circshift(a1, 10)
             @test collect(decrypt(circshift(sa1, -14), private_key)) ≈ circshift(a1, -14)
-            @test collect(decrypt(circshift(sa1, -15), private_key)) ≈ circshift(a1, -15)
+            @test collect(decrypt(circshift(sa1, 7), private_key)) ≈ circshift(a1, 7)
             @test collect(decrypt(circshift(sa1, 0), private_key)) ≈ circshift(a1, 0)
-            @test collect(decrypt(circshift(sa3, 10), private_key)) ≈ circshift(a3, 10)
+            @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
         end
 
         @testset verbose=true showtiming=true "length" begin
@@ -218,8 +218,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test capacity(sv1) == 8
             @test capacity(pm1) == 8
             @test capacity(sm1) == 8
-            @test capacity(pa3) == 64
-            @test capacity(sa3) == 64
+            @test capacity(pa3) == 32
+            @test capacity(sa3) == 32
         end
         
 
@@ -264,13 +264,13 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn show(stdout, sm1)
             println()
 
-            @test_nowarn show(stdout, pa1)
+            @test_nowarn show(stdout, pa3)
             println()
 
-            @test_nowarn show(stdout, MIME"text/plain"(), pa1)
+            @test_nowarn show(stdout, MIME"text/plain"(), pa3)
             println()
 
-            @test_nowarn show(stdout, sa1)
+            @test_nowarn show(stdout, sa3)
             println()
 
             @test_nowarn show(stdout, public_key)
