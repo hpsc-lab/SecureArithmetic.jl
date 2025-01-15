@@ -157,7 +157,7 @@ capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
 
 # SecureArray is used to store data in many CKKSCiphertexts. 
 struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
-    data::Vector{DataT}
+    data::DataT
     shape::Tuple
     lengths::Vector{Int}
     capacities::Vector{Int}
@@ -165,13 +165,13 @@ struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     
     function SecureArray(data, shape, lengths, capacities,
                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, length(shape), typeof(data[1])}(data, shape, lengths, capacities, context)
+        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
     end
 end
 
 # PlainArray is used to store data in many CKKSPlaintexts.
 struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
-    data::Vector{DataT}
+    data::DataT
     shape::Tuple
     lengths::Vector{Int}
     capacities::Vector{Int}
@@ -179,7 +179,7 @@ struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     
     function PlainArray(data, shape, lengths, capacities,
                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, length(shape), typeof(data[1])}(data, shape, lengths, capacities, context)
+        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
     end
 end
 

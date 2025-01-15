@@ -699,14 +699,15 @@ end
 ############################################################################################
 
 function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                              shift::Union{Integer, Tuple}, shape)
+                              shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer}) where N
     init_array_rotation!(context, private_key, [shift], shape)
 end
 function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                              shifts, shape)
+                              shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
+                              shape::NTuple{N, Integer}) where N
     cc = get_crypto_context(context)
     # Get shifts for precompilation
-    shifts_ = get_shifts_array(context, private_key, shifts, shape)
+    shifts_ = get_shifts_array(context, shifts, shape)
     # All shifts stored in shifts_ correspond to Base.circshift, but to use with OpenFHE, all shifts
     # have to be negated.
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -unique(shifts_))
@@ -714,8 +715,13 @@ function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_
     nothing
 end
 
-function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                          shifts::Vector{<:Integer}, shape)
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Tuple{<:Integer}},
+                          shape::Tuple{Integer})
+    get_shifts_array(context, getproperty.(shifts,1), shape)
+end
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Integer},
+                          shape::Tuple{Integer})
     # extract capacity
     cc = get_crypto_context(context)
     capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
@@ -753,6 +759,39 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, private_key:
     end
 
     shifts_
+end
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
+                          shape::NTuple{N, Integer}) where N
+    
+    # calculate length of each dimension
+    lengths = ones(Int, N)
+    for i in range(2, N)
+        lengths[i] = prod(shape[1:i-1])
+    end
+    # assemble 1d shifts
+    shifts_1d = Int[]
+    for shift in shifts
+        # use mutable type
+        shift = collect(shift)
+        # minimal required shift
+        shift = shift .% shape
+        # convert negative shift to positive
+        for i in range(1, N)
+            if shift[i] < 0
+                shift[i] = shape[i] + shift[i]
+            end
+        end
+        # shift for each dimension
+        shift1 = zeros(Int, N)
+        for i in range(1, N-1)
+            shift1[i] = shift[i] * lengths[i]
+            push!(shifts_1d, shift1[i] - lengths[i+1])
+        end
+        push!(shifts_1d, shift[end] * lengths[end])
+    end
+
+    get_shifts_array(context, shifts_1d, (prod(shape),))
 end
 
 function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
@@ -1000,6 +1039,10 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array
 end
 
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Tuple{Integer})
+    rotate(sa, shift[1])
+end
+
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # minimal required shift
     shift = shift % length(sa)
@@ -1162,4 +1205,54 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     end
 
     SecureArray(getproperty.(sv, :data), size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+    # use mutable type
+    shift = collect(shift)
+    # minimal required shift
+    shift = shift .% size(sa)
+    for i in range(1, N)
+        # convert negative shifts to positive
+        if shift[i] < 0
+            shift[i] = size(sa)[i] + shift[i]
+        end
+    end
+    shift1 = zeros(Int, N)
+    lengths = ones(Int, N)
+    for i in range(1, N)
+        # calculate length of each dimension
+        lengths[i] = prod(size(sa)[1:i-1])
+        # Shift for each dimension
+        shift1[i] = shift[i] * lengths[i]
+    end
+    # masks for incorrectly placed elements in each dimension
+    masks = []
+    anti_masks = []
+    # indicies for array iteration
+    indicies = Vector{Any}(undef, N)
+    for i in range(1, N-1)
+        push!(masks, zeros(size(sa)))
+        push!(anti_masks, zeros(size(sa)))
+        indicies[:] .= range.(1, size(sa))
+        indicies[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        masks[i][indicies...] .= 1.0
+        anti_masks[i] = 1 .- masks[i]
+    end
+    # convert masks to PlainArray's
+    for i in range(1, N-1)
+        masks[i] = PlainArray(vec(masks[i]), sa.context)
+        anti_masks[i] = PlainArray(vec(anti_masks[i]), sa.context)
+    end
+    # operate with N-dimensional array in form of 1D
+    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
+    # correct positions of elements in each dimension
+    for i in range(1, N-1)
+        if shift[i] != 0
+            sv = rotate(sv*anti_masks[i], shift1[i]) + rotate(sv * masks[i], shift1[i] - lengths[i+1])
+        end
+    end
+    sv = rotate(sv, shift1[end])
+
+    SecureArray(sv.data, size(sa), sa.lengths, sa.capacities, sa.context)
 end

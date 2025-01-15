@@ -7,7 +7,7 @@ using OpenFHE
 @testset verbose=true showtiming=true "test_unit.jl" begin
 
 # Set up OpenFHE backend
-multiplicative_depth = 1
+multiplicative_depth = 7
 scaling_modulus = 50
 batch_size = 8
 
@@ -52,6 +52,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         @testset verbose=true showtiming=true "init_array_rotation!" begin
             @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, 7], (30,))
             @test_nowarn init_array_rotation!(context, private_key, 2, (32,))
+            @test_nowarn init_array_rotation!(context, private_key, (3,), (32,))
+            @test_nowarn init_array_rotation!(context, private_key, [(2, 3, 1, -3), (-1, -2, -1, 2)], (4,3,4,5))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -67,6 +69,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         a1 = Vector{Float64}(range(1, 30))
         a2 = Vector{Float64}(range(30, 1, step=-1))
         a3 = Vector{Float64}(range(1, 32))
+        a4 = reshape(Vector{Float64}(range(1, 240)), (4,3,4,5))
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
@@ -93,6 +96,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         pa1 = PlainArray(a1, context)
         pa2 = PlainArray(a2, context)
         pa3 = PlainArray(a3, context)
+        pa4 = PlainArray(a4, context)
 
         @testset verbose=true showtiming=true "encrypt" begin
             @test encrypt(pv1, public_key) isa SecureVector
@@ -109,6 +113,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         sa1 = encrypt(pa1, public_key)
         sa2 = encrypt(pa2, public_key)
         sa3 = encrypt(pa3, public_key)
+        sa4 = encrypt(pa4, public_key)
 
         @testset verbose=true showtiming=true "add" begin
             @test sv1 + sv2 isa SecureVector
@@ -196,8 +201,11 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa1, 10), private_key)) ≈ circshift(a1, 10)
             @test collect(decrypt(circshift(sa1, -14), private_key)) ≈ circshift(a1, -14)
             @test collect(decrypt(circshift(sa1, 7), private_key)) ≈ circshift(a1, 7)
+            @test collect(decrypt(circshift(sa1, (3,)), private_key)) ≈ circshift(a1, (3,))
             @test collect(decrypt(circshift(sa1, 0), private_key)) ≈ circshift(a1, 0)
             @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
+            @test collect(decrypt(circshift(sa4, (2, 3, 1, -3)), private_key)) ≈ circshift(a4, (2, 3, 1, -3))
+            @test collect(decrypt(circshift(sa4, (-1, -2, -1, 2)), private_key)) ≈ circshift(a4, (-1, -2, -1, 2))
         end
 
         @testset verbose=true showtiming=true "length" begin

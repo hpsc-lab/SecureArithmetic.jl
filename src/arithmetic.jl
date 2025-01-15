@@ -117,7 +117,7 @@ Base.:*(sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
 
 # Circular shift
-function Base.circshift(sa::SecureArray, shift::Union{Integer, Tuple})
+function Base.circshift(sa::SecureArray, shift::Union{Integer, NTuple{N, Integer}}) where N
     if all(shift .% size(sa) .== 0)
         return sa
     end
