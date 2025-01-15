@@ -1272,14 +1272,14 @@ end
     # masks for incorrectly placed elements in each dimension
     masks = []
     anti_masks = []
-    # indicies for array iteration
+    # indices for array iteration
     indicies = Vector{Any}(undef, N)
     for i in range(1, N-1)
         push!(masks, zeros(size(sa)))
         push!(anti_masks, zeros(size(sa)))
-        indicies[:] .= range.(1, size(sa))
-        indicies[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
-        masks[i][indicies...] .= 1.0
+        indices[:] .= range.(1, size(sa))
+        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        masks[i][indices...] .= 1.0
         anti_masks[i] = 1 .- masks[i]
     end
     # convert masks to PlainArray's
@@ -1341,29 +1341,29 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer})
     # masks
     masks = []
     main_mask = ones(Int, size(sa))
-    # indicies for array iteration
-    indicies = Vector{Any}(undef, N)
+    # indices for array iteration
+    indices = Vector{Any}(undef, N)
     # shifts to retrieve cyclicity
     shift_masked = []
     # compute all combinations of dimensions (except last one)
     combinations = compute_dimension_combinations(N-1, shift[1:N-1])
     # mask for main part
     for i in range(1, N-1)
-        indicies[:] .= range.(1, size(sa))
-        indicies[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
-        main_mask[indicies...] .= 0
+        indices[:] .= range.(1, size(sa))
+        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        main_mask[indices...] .= 0
     end
     # masks to retrieve cyclicity
     for i in combinations
         push!(shift_masked, main_shift)
-        indicies[:] .= range.(1, size(sa) .- shift)
-        indicies[end] = range.(1, size(sa)[end])
+        indices[:] .= range.(1, size(sa) .- shift)
+        indices[end] = range.(1, size(sa)[end])
         for j in i
-            indicies[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
+            indices[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
             shift_masked[end] -= lengths[j+1]
         end
         push!(masks, zeros(Int, size(sa)))
-        masks[end][indicies...] .= 1
+        masks[end][indices...] .= 1
     end
     # convert masks to PlainArray's
     main_mask = PlainArray(vec(main_mask), sa.context)
