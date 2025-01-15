@@ -761,7 +761,7 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
     shifts_
 end
 
-function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
+#=function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
                           shape::NTuple{N, Integer}) where N
     
     # calculate length of each dimension
@@ -792,6 +792,49 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
     end
 
     get_shifts_array(context, shifts_1d, (prod(shape),))
+end=#
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
+    shape::NTuple{N, Integer}) where N
+
+    # calculate length of each dimension
+    lengths = ones(Int, N)
+    for i in range(2, N)
+        lengths[i] = prod(shape[1:i-1])
+    end
+    # assemble 1d shifts
+    shifts_1d = Int[]
+    for shift in shifts
+        # use mutable type
+        shift = collect(shift)
+        # minimal required shift
+        shift = shift .% shape
+        # convert negative shift to positive
+        for i in range(1, N)
+            if shift[i] < 0
+                shift[i] = shape[i] + shift[i]
+            end
+        end
+        # shift for each dimension
+        shift1 = zeros(Int, N)
+        for i in range(1, N)
+            shift1[i] = shift[i] * lengths[i]
+        end
+        # shift for main part of array
+        main_shift = sum(shift1)
+        push!(shifts_1d, sum(shift1))
+        # all possible combinations of dimensions
+        combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+        # shifts to retrieve cyclicity
+        for i in combinations
+            push!(shifts_1d, main_shift)
+            for j in i
+                shifts_1d[end] -= lengths[j+1]
+            end
+        end
+    end
+
+    get_shifts_array(context, shifts_1d, (prod(shape),))
 end
 
 function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
@@ -818,7 +861,7 @@ function PlainArray(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBacken
     PlainArray(Vector{Float64}(data), context, shape)
 end
 
-function PlainArray(data::Array{Float64}, context::SecureContext{<:OpenFHEBackend})
+function PlainArray(data::Array{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainArray(Vector{Float64}(vec(data)), context, size(data))
 end
 
@@ -1207,7 +1250,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     SecureArray(getproperty.(sv, :data), size(sa), sa.lengths, sa.capacities, sa.context)
 end
 
-function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+#=function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
     # use mutable type
     shift = collect(shift)
     # minimal required shift
@@ -1255,4 +1298,86 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer})
     sv = rotate(sv, shift1[end])
 
     SecureArray(sv.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end=#
+
+function compute_dimension_combinations(N::Integer, shift::Vector{<:Integer})
+    if N == 1
+        if shift[1] != 0
+            return [[1]]
+        else
+            return []
+        end
+    end
+    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+    if shift[N] != 0
+        n = length(combinations)
+        append!(combinations, push!.(copy.(combinations), N))
+        push!(combinations, [N])
+    end
+    return combinations
+end
+
+function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+    # use mutable type
+    shift = collect(shift)
+    # minimal required shift
+    shift = shift .% size(sa)
+    for i in range(1, N)
+        # convert negative shifts to positive
+        if shift[i] < 0
+            shift[i] = size(sa)[i] + shift[i]
+        end
+    end
+    shift1 = zeros(Int, N)
+    lengths = ones(Int, N)
+    for i in range(1, N)
+        # calculate length of each dimension
+        lengths[i] = prod(size(sa)[1:i-1])
+        # Shift for each dimension
+        shift1[i] = shift[i] * lengths[i]
+    end
+    # shift for main part
+    main_shift = sum(shift1)
+    # masks
+    masks = []
+    main_mask = ones(Int, size(sa))
+    # indicies for array iteration
+    indicies = Vector{Any}(undef, N)
+    # shifts to retrieve cyclicity
+    shift_masked = []
+    # compute all combinations of dimensions (except last one)
+    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+    # mask for main part
+    for i in range(1, N-1)
+        indicies[:] .= range.(1, size(sa))
+        indicies[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        main_mask[indicies...] .= 0
+    end
+    # masks to retrieve cyclicity
+    for i in combinations
+        push!(shift_masked, main_shift)
+        indicies[:] .= range.(1, size(sa) .- shift)
+        indicies[end] = range.(1, size(sa)[end])
+        for j in i
+            indicies[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
+            shift_masked[end] -= lengths[j+1]
+        end
+        push!(masks, zeros(Int, size(sa)))
+        masks[end][indicies...] .= 1
+    end
+    # convert masks to PlainArray's
+    main_mask = PlainArray(vec(main_mask), sa.context)
+    for i in range(1, length(masks))
+        masks[i] = PlainArray(vec(masks[i]), sa.context)
+    end
+    # operate with N-dimensional array in form of 1D
+    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
+    # apply main shift
+    sv_new = circshift(sv * main_mask, main_shift)
+    # correct positions of elements in each dimension combination
+    for i in range(1, length(masks))
+        sv_new += circshift(sv * masks[i], shift_masked[i])
+    end
+
+    SecureArray(sv_new.data, size(sa), sa.lengths, sa.capacities, sa.context)
 end

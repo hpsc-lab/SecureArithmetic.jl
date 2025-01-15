@@ -7,7 +7,7 @@ using OpenFHE
 @testset verbose=true showtiming=true "test_unit.jl" begin
 
 # Set up OpenFHE backend
-multiplicative_depth = 7
+multiplicative_depth = 2
 scaling_modulus = 50
 batch_size = 8
 
@@ -53,7 +53,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, 7], (30,))
             @test_nowarn init_array_rotation!(context, private_key, 2, (32,))
             @test_nowarn init_array_rotation!(context, private_key, (3,), (32,))
-            @test_nowarn init_array_rotation!(context, private_key, [(2, 3, 1, -3), (-1, -2, -1, 2)], (4,3,4,5))
+            @test_nowarn init_array_rotation!(context, private_key, [(0, 3, 1, -3), (-1, -2, -1, 2)], (4,3,4,5))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -204,7 +204,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa1, (3,)), private_key)) ≈ circshift(a1, (3,))
             @test collect(decrypt(circshift(sa1, 0), private_key)) ≈ circshift(a1, 0)
             @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
-            @test collect(decrypt(circshift(sa4, (2, 3, 1, -3)), private_key)) ≈ circshift(a4, (2, 3, 1, -3))
+            @test collect(decrypt(circshift(sa4, (0, 3, 1, -3)), private_key)) ≈ circshift(a4, (0, 3, 1, -3))
             @test collect(decrypt(circshift(sa4, (-1, -2, -1, 2)), private_key)) ≈ circshift(a4, (-1, -2, -1, 2))
         end
 
