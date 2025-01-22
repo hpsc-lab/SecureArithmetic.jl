@@ -557,7 +557,7 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
 end
 
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Union{Integer, Tuple{Integer}}; wrap_by)
-    # wrap by capacity makes sence only for single ciphertext
+    # wrap by capacity makes sense only for single ciphertext
     if wrap_by == :capacity && length(sa.data) == 1
         cc = get_crypto_context(sa)
         # We use `-shift` to match Julia's usual `circshift` direction
@@ -779,7 +779,7 @@ end
     masks = []
     anti_masks = []
     # indices for array iteration
-    indicies = Vector{Any}(undef, N)
+    indices = Vector{Any}(undef, N)
     for i in range(1, N-1)
         push!(masks, zeros(size(sa)))
         push!(anti_masks, zeros(size(sa)))
