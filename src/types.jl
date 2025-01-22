@@ -17,68 +17,6 @@ function Base.show(io::IO, v::SecureContext)
 end
 
 """
-    SecureVector
-
-Holds encrypted data for arithmetic operations. Can be converted to a `PlainVector` using
-[`decrypt`](@ref).
-
-See also: [`PlainVector`](@ref), [`decrypt`](@ref)
-"""
-mutable struct SecureVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
-    data::DataT
-    length::Int
-    capacity::Int
-    context::SecureContext{CryptoBackendT}
-
-    function SecureVector(data, length, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, length, capacity, context)
-    end
-end
-
-function Base.show(io::IO, v::SecureVector)
-    print("SecureVector{", backend_name(v), "}(data=<encrypted>, length=$(v.length))")
-end
-
-"""
-    PlainVector
-
-Holds encoded - but not encrypted - data for arithmetic operations. Can be converted to a
-`SecureVector` using [`encrypt`](@ref).
-
-See also: [`SecureVector`](@ref), [`encrypt`](@ref)
-"""
-struct PlainVector{CryptoBackendT <: AbstractCryptoBackend, DataT}
-    data::DataT
-    length::Int
-    capacity::Int
-    context::SecureContext{CryptoBackendT}
-
-    function PlainVector(data, length, capacity, context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, length, capacity, context)
-    end
-end
-
-"""
-    length(v::Union{PlainVector, SecureVector})
-
-Return the current length of `v`, i.e., the number of container elements in use.
-Note that this might be less than its maximum [`capacity`](@ref).
-
-See also: [`capacity`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
-"""
-Base.length(v::Union{PlainVector, SecureVector}) = v.length
-
-"""
-    capacity(v::Union{PlainVector, SecureVector})
-
-Return the current capacity of `v`, i.e., the maximum number of elements the container may
-hold.. Note that this might be more than its current [`length`](@ref).
-
-See also: [`length`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
-"""
-capacity(v::Union{PlainVector, SecureVector}) = v.capacity
-
-"""
     PrivateKey
 
 Holds a private key that is used for decryption in [`decrypt`](@ref).
@@ -118,44 +56,6 @@ function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
-# Here `capacity` needs to be large enough to hold at least `prod(shape)` elements
-mutable struct SecureMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
-    data::DataT
-    shape::Tuple{Int, Int}
-    capacity::Int
-    context::SecureContext{CryptoBackendT}
-
-    function SecureMatrix(data, shape, capacity,
-                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
-    end
-end
-
-function Base.show(io::IO, m::SecureMatrix)
-    print("SecureMatrix{", backend_name(m), "}(data=<encrypted>, size=$(m.shape))")
-end
-
-# Here `capacity` needs to be large enough to hold at least `prod(shape)` elements
-struct PlainMatrix{CryptoBackendT <: AbstractCryptoBackend, DataT}
-    data::DataT
-    shape::Tuple{Int, Int}
-    capacity::Int
-    context::SecureContext{CryptoBackendT}
-
-    function PlainMatrix(data, shape, capacity,
-                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, typeof(data)}(data, shape, capacity, context)
-    end
-end
-
-Base.size(m::Union{PlainMatrix, SecureMatrix}) = m.shape
-Base.size(m::Union{PlainMatrix, SecureMatrix}, d::Int) = m.shape[d]
-
-Base.length(m::Union{PlainMatrix, SecureMatrix}) = prod(m.shape)
-
-capacity(m::Union{PlainMatrix, SecureMatrix}) = m.capacity
-
-# SecureArray is used to store data in many CKKSCiphertexts. 
 struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::Tuple
@@ -169,7 +69,17 @@ struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     end
 end
 
-# PlainArray is used to store data in many CKKSPlaintexts.
+"""
+    SecureVector{Backend, DataT}
+
+Alias for SecureArray{Backend, 1, DataT}. Holds encrypted data for arithmetic operations.
+Can be converted to a `PlainVector` using [`decrypt`](@ref).
+
+See also: [`PlainVector`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref)
+"""
+const SecureVector{Backend, DataT} = SecureArray{Backend, 1, DataT}
+const SecureMatrix{Backend, DataT} = SecureArray{Backend, 2, DataT}
+
 struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::Tuple
@@ -183,14 +93,41 @@ struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     end
 end
 
-Base.size(m::Union{PlainArray, SecureArray}) = m.shape
-Base.size(m::Union{PlainArray, SecureArray}, d::Int) = m.shape[d]
+"""
+    PlainVector
 
-Base.length(m::Union{PlainArray, SecureArray}) = prod(m.shape)
+Alias for PlainArray{Backend, 1, DataT}. Holds encoded - but not encrypted - data for
+arithmetic operations. Can be converted to a `SecureVector` using [`encrypt`](@ref).
 
-Base.ndims(m::Union{PlainArray, SecureArray}) = length(m.shape)
+See also: [`SecureVector`](@ref), [`PlainArray`](@ref), [`encrypt`](@ref)
+"""
+const PlainVector{Backend, DataT} = PlainArray{Backend, 1, DataT}
+const PlainMatrix{Backend, DataT} = PlainArray{Backend, 2, DataT}
 
-capacity(m::Union{PlainArray, SecureArray}) = sum(m.capacities)
+Base.size(a::Union{PlainArray, SecureArray}) = a.shape
+Base.size(a::Union{PlainArray, SecureArray}, d::Int) = a.shape[d]
+
+"""
+    length(a::Union{PlainArray, SecureArray})
+
+Return the current length of `a`, i.e., the number of container elements in use.
+Note that this might be less than its maximum [`capacity`](@ref).
+
+See also: [`capacity`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref)
+"""
+Base.length(a::Union{PlainArray, SecureArray}) = prod(a.shape)
+
+Base.ndims(a::Union{PlainArray, SecureArray}) = length(a.shape)
+
+"""
+    capacity(a::Union{PlainArray, SecureArray})
+
+Return the current capacity of `a`, i.e., the maximum number of elements the container may
+hold. Note that this might be more than its current [`length`](@ref).
+
+See also: [`length`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref)
+"""
+capacity(a::Union{PlainArray, SecureArray}) = sum(a.capacities)
 
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
@@ -199,6 +136,5 @@ capacity(m::Union{PlainArray, SecureArray}) = sum(m.capacities)
 __parameterless_type(T) = Base.typename(T).wrapper
 
 # Convenience method for getting human-readable names
-backend_name(x::Union{SecureContext{T}, SecureVector{T}, PlainVector{T}, PrivateKey{T},
-                      PublicKey{T}, SecureMatrix{T},
-                      PlainMatrix{T}}) where T = string(__parameterless_type(T))
+backend_name(x::Union{SecureContext{T}, SecureArray{T}, PlainArray{T}, PrivateKey{T},
+                      PublicKey{T}}) where T = string(__parameterless_type(T))

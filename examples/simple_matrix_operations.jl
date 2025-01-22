@@ -6,7 +6,7 @@ function simple_matrix_operations(context)
 
     init_multiplication!(context, private_key)
     init_bootstrapping!(context, private_key)
-    init_matrix_rotation!(context, private_key, [(1, -1), (0, 1)], (3, 3))
+    init_array_rotation!(context, private_key, [(1, -1), (0, 1)], (3, 3))
  
     m1 = [0.25 0.5 0.75;
          1.0 2.0 3.0;
