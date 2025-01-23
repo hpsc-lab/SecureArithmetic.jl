@@ -85,7 +85,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "PlainMatrix" begin
             @test PlainMatrix(m1, context) isa PlainMatrix
-            @test PlainMatrix([1, 2, 3, 4], context, (2, 2)) isa PlainMatrix
         end
 
         pm1 = PlainMatrix(m1, context)

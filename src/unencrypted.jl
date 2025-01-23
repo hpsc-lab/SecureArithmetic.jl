@@ -56,10 +56,56 @@ init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateK
 ############################################################################################
 # Array
 ############################################################################################
+"""
+    init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                         shifts, shape)
 
+An empty duplicate of [`init_array_rotation!`](@ref) for unencrypted data.
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
+[`init_array_rotation!`](@ref)
+"""
 init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
                      shifts, shape) = nothing
 
+"""
+    PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
+
+Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
+object of type `SecureContext{<:Unencrypted}`. Returns [`PlainVector`](@ref) with not encoded and
+not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureVector`](@ref).
+        
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+"""
+function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
+    PlainArray(data, context)                    
+end
+
+"""
+    PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
+
+Constructor for data type [`PlainMatrix`](@ref) takes an unencrypted `data` matrix and a `context`
+object of type `SecureContext{<:Unencrypted}`. Returns [`PlainMatrix`](@ref) with not encoded and
+not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureMatrix`](@ref).
+        
+See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+"""
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
+    PlainArray(data, context)                    
+end
+
+"""
+    PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
+
+Constructor for data type [`PlainArray`](@ref) takes an unencrypted `data` array and a `context`
+object of type `SecureContext{<:Unencrypted}`. Returns [`PlainArray`](@ref) with not encoded and
+not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureArray`](@ref).
+        
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+"""
 function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
     PlainArray(data, size(data), [length(data)], [length(data)], context)
 end

@@ -88,7 +88,11 @@ Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
 Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
 OpenFHE.
 
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref)
+Note: To ensure that all shifts for intrinsic operations are precomputed, use
+`init_array_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_array_rotation!`](@ref)
 """
 function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                         shifts)
@@ -121,11 +125,36 @@ end
 ############################################################################################
 # Array
 ############################################################################################
+"""
+    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                         shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer})
 
+Generate all required rotation keys for use with `circshift` for the
+rotation index in `shift` using the `private_key`. The keys are stored in the given `context`.
+
+Note: To precompute rotation keys for an exactly specified rotation index, use `init_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_rotation!`](@ref)
+"""
 function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                               shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer}) where N
     init_array_rotation!(context, private_key, [shift], shape)
 end
+
+"""
+    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                         shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
+                         shape::NTuple{N, Integer})
+
+Generate all required rotation keys for use with `circshift` for the
+rotation indexes in `shifts` using the `private_key`. The keys are stored in the given `context`.
+
+Note: To precompute rotation keys for exactly specified rotation indexes, use `init_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_rotation!`](@ref)
+"""
 function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                               shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
                               shape::NTuple{N, Integer}) where N
@@ -261,7 +290,6 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
     get_shifts_array(context, shifts_1d, (prod(shape),))
 end
 
-
 """
     PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
 
@@ -273,16 +301,23 @@ resulting in [`SecureVector`](@ref).
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 [`OpenFHEBackend`](@ref)
 """
-function PlainVector(data::Vector{<:Real}, context::SecureContext)
+function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainArray(data, context)                    
 end
 
-function PlainMatrix(data::Matrix{<:Real}, context::SecureContext)
-    PlainArray(data, context)                    
-end
+"""
+    PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
 
-function PlainMatrix(data::Vector{<:Real}, context::SecureContext, shape::Tuple)
-    PlainArray(data, context, shape)                    
+Constructor for data type [`PlainMatrix`](@ref) takes an unencrypted `data` matrix and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainMatrix`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureMatrix`](@ref).
+    
+See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
+"""
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
+    PlainArray(data, context)                    
 end
 
 function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
@@ -309,6 +344,17 @@ function PlainArray(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBacken
     PlainArray(Vector{Float64}(data), context, shape)
 end
 
+"""
+    PlainArray(data::Array{<:Real}, context::SecureContext{<:OpenFHEBackend})
+
+Constructor for data type [`PlainArray`](@ref) takes an unencrypted `data` array and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainArray`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureArray`](@ref).
+    
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
+"""
 function PlainArray(data::Array{<:Real}, context::SecureContext{<:OpenFHEBackend})
     PlainArray(Vector{Float64}(vec(data)), context, size(data))
 end
