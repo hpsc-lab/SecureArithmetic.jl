@@ -56,6 +56,14 @@ function Base.show(io::IO, key::PublicKey)
     print("PublicKey{", backend_name(key), "}()")
 end
 
+"""
+    SecureArray{Backend, N, DataT}
+
+Holds an encrypted `N`-dimensional array as a vector of ciphertexts for arithmetic operations.
+Can be converted to a `PlainArray` using [`decrypt`](@ref).
+
+See also: [`PlainArray`](@ref), [`decrypt`](@ref)
+"""
 struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::Tuple
@@ -72,14 +80,31 @@ end
 """
     SecureVector{Backend, DataT}
 
-Alias for SecureArray{Backend, 1, DataT}. Holds encrypted data for arithmetic operations.
+Alias for SecureArray{Backend, 1, DataT}. Holds encrypted vector data for arithmetic operations.
 Can be converted to a `PlainVector` using [`decrypt`](@ref).
 
 See also: [`PlainVector`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref)
 """
 const SecureVector{Backend, DataT} = SecureArray{Backend, 1, DataT}
+
+"""
+    SecureMatrix{Backend, DataT}
+
+Alias for SecureArray{Backend, 2, DataT}. Holds encrypted matrix data for arithmetic operations.
+Can be converted to a `PlainMatrix` using [`decrypt`](@ref).
+
+See also: [`PlainMatrix`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref)
+"""
 const SecureMatrix{Backend, DataT} = SecureArray{Backend, 2, DataT}
 
+"""
+    PlainArray{Backend, N, DataT}
+
+Holds an encoded - but not encrypted - `N`-dimensional array as a vector of plaintexts
+for arithmetic operations. Can be converted to a `SecureArray` using [`encrypt`](@ref).
+
+See also: [`SecureArray`](@ref), [`encrypt`](@ref)
+"""
 struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::Tuple
@@ -94,17 +119,41 @@ struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
 end
 
 """
-    PlainVector
+    PlainVector{Backend, DataT}
 
-Alias for PlainArray{Backend, 1, DataT}. Holds encoded - but not encrypted - data for
+Alias for PlainArray{Backend, 1, DataT}. Holds encoded - but not encrypted - vector data for
 arithmetic operations. Can be converted to a `SecureVector` using [`encrypt`](@ref).
 
 See also: [`SecureVector`](@ref), [`PlainArray`](@ref), [`encrypt`](@ref)
 """
 const PlainVector{Backend, DataT} = PlainArray{Backend, 1, DataT}
+
+"""
+    PlainMatrix{Backend, DataT}
+
+Alias for PlainArray{Backend, 2, DataT}. Holds encoded - but not encrypted - matrix data for
+arithmetic operations. Can be converted to a `SecureMatrix` using [`encrypt`](@ref).
+
+See also: [`SecureMatrix`](@ref), [`PlainArray`](@ref), [`encrypt`](@ref)
+"""
 const PlainMatrix{Backend, DataT} = PlainArray{Backend, 2, DataT}
 
+"""
+    size(a::Union{PlainArray, SecureArray})
+
+Return the current shape of `a`.
+
+See also: [`SecureArray`](@ref), [`PlainArray`](@ref)
+"""
 Base.size(a::Union{PlainArray, SecureArray}) = a.shape
+
+"""
+    size(a::Union{PlainArray, SecureArray}, d::Int)
+
+Return the current length of `d`th dimension of `a`.
+
+See also: [`SecureArray`](@ref), [`PlainArray`](@ref)
+"""
 Base.size(a::Union{PlainArray, SecureArray}, d::Int) = a.shape[d]
 
 """
