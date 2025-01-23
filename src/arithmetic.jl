@@ -26,7 +26,19 @@ Base.:*(sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
 
 # Circular shift
-function Base.circshift(sa::SecureArray, shift::Union{Integer, NTuple{N, Integer}}) where N
+"""
+    circshift(sa::SecureArray, shift::NTuple{N, Integer})
+
+Circularly shift, i.e., rotate the data in `sa` by `shift` positions, similarly to Julia's
+`circshift` for regular arrays.
+
+Note: If `N` is greater than one, this operation increases the multiplicative level by two.
+
+Note: To precompute all required rotation shifts, use `init_array_rotation!`.
+
+See also: [`SecureArray`](@ref), [`init_array_rotation!`](@ref)
+"""
+function Base.circshift(sa::SecureArray, shift::NTuple{N, Integer}) where N
     if all(shift .% size(sa) .== 0)
         return sa
     end
@@ -46,7 +58,9 @@ wrap_by = :capacity if data saved in a single ciphertext, otherwise in wrap_by =
 Note: If `sv`'s length is less than its capacity, wrapping by `:length` increases the
 multiplicative depth of your algorithm by one and is more expensive to compute.
 
-See also: [`SecureVector`](@ref), [`length`](@ref), [`capacity`](@ref)
+Note: To precompute all required rotation shifts, use `init_array_rotation!`.
+
+See also: [`SecureVector`](@ref), [`length`](@ref), [`capacity`](@ref), [`init_array_rotation!`](@ref)
 """
 function Base.circshift(sv::SecureVector, shift::Union{Integer, Tuple{Integer}}; wrap_by = :not_set)
     if wrap_by == :not_set 
