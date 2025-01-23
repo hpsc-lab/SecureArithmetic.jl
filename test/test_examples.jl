@@ -17,6 +17,10 @@ end
     @test_nowarn include("../examples/simple_matrix_operations.jl")
 end
 
+@testset verbose=true showtiming=true "examples/simple_array_operations.jl" begin
+    @test_nowarn include("../examples/simple_array_operations.jl")
+end
+
 end # @testset "test_examples.jl"
 
 end # module

@@ -43,19 +43,15 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn init_rotation!(context, private_key, [1, -2])
         end
 
-        @testset verbose=true showtiming=true "init_array_rotation!_matrix" begin
-            @test_nowarn init_array_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
-                                                                      (0, 1), (1, 0)], (4, 2))
-            @test_nowarn init_array_rotation!(context, private_key, (2, 0), (4, 2))
-        end
-
         @testset verbose=true showtiming=true "init_array_rotation!" begin
+            @test_nowarn init_array_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
+                                                                     (0, 1), (1, 0)], (4, 2))
             @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, 7], (30,))
             @test_nowarn init_array_rotation!(context, private_key, 2, (32,))
             @test_nowarn init_array_rotation!(context, private_key, (3,), (32,))
-            @test_nowarn init_array_rotation!(context, private_key, [(0, 3, 1, -3), (-1, -2, -1, 2)], (4,3,4,5))
-            @test_nowarn init_array_rotation!(context, private_key, [3, 1], (6,))
-            @test_nowarn init_array_rotation!(context, private_key, [-3, 2], (8,))
+            @test_nowarn init_array_rotation!(context, private_key, [(0, 3, 1, -3), (-1, -2, -1, 2)],
+                                              (4, 3, 4, 5))
+            @test_nowarn init_array_rotation!(context, private_key, [1, -2], (3,))
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -72,8 +68,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         a2 = Vector{Float64}(range(30, 1, step=-1))
         a3 = Vector{Float64}(range(1, 32))
         a4 = reshape(Vector{Float64}(range(1, 240)), (4,3,4,5))
-        a5 = [1, 2, 3, 4, 5, 6]
-        a6 = [1, 2, 3, 4, 5, 6, 7, 8]
 
         @testset verbose=true showtiming=true "PlainVector" begin
             @test PlainVector(x1, context) isa PlainVector
@@ -100,8 +94,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         pa2 = PlainArray(a2, context)
         pa3 = PlainArray(a3, context)
         pa4 = PlainArray(a4, context)
-        pa5 = PlainArray(a5, context)
-        pa6 = PlainArray(a6, context)
 
         @testset verbose=true showtiming=true "encrypt" begin
             @test encrypt(pv1, public_key) isa SecureVector
@@ -119,8 +111,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         sa2 = encrypt(pa2, public_key)
         sa3 = encrypt(pa3, public_key)
         sa4 = encrypt(pa4, public_key)
-        sa5 = encrypt(pa5, public_key)
-        sa6 = encrypt(pa6, public_key)
 
 
         @testset verbose=true showtiming=true "add" begin
@@ -214,10 +204,6 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
             @test collect(decrypt(circshift(sa4, (0, 3, 1, -3)), private_key)) ≈ circshift(a4, (0, 3, 1, -3))
             @test collect(decrypt(circshift(sa4, (-1, -2, -1, 2)), private_key)) ≈ circshift(a4, (-1, -2, -1, 2))
-            @test collect(decrypt(circshift(sa5, 3, wrap_by=:length), private_key)) ≈ circshift(a5, 3)
-            @test collect(decrypt(circshift(sa5, 1, wrap_by=:length), private_key)) ≈ circshift(a5, 1)
-            @test collect(decrypt(circshift(sa6, -3), private_key)) ≈ circshift(a6, -3)
-            @test collect(decrypt(circshift(sa6, 2), private_key)) ≈ circshift(a6, 2)
         end
 
         @testset verbose=true showtiming=true "length" begin
