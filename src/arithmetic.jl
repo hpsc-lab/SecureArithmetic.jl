@@ -72,7 +72,7 @@ function Base.circshift(sv::SecureVector, shift::Union{Integer, Tuple{Integer}};
     elseif wrap_by == :capacity
         if length(sv.data) != 1
             wrap_by = :length
-            warn("Keyword wrap_by is reset to :length, because vector is split between many ciphertexts.")
+            @warn "Keyword wrap_by is reset to :length, because vector is split between many ciphertexts."
         end
     end
     if !(wrap_by in (:length, :capacity))

@@ -195,6 +195,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sm1, (0, 1)), private_key)) ≈ circshift(m1, (0, 1))
             @test collect(decrypt(circshift(sm1, (1, 0)), private_key)) ≈ circshift(m1, (1, 0))
             @test collect(decrypt(circshift(sm1, (0, 0)), private_key)) ≈ m1
+            @test_logs (:warn,) circshift(sa1, 1; wrap_by = :capacity)
             @test collect(decrypt(circshift(sa1, 1), private_key)) ≈ circshift(a1, 1)
             @test collect(decrypt(circshift(sa1, 10), private_key)) ≈ circshift(a1, 10)
             @test collect(decrypt(circshift(sa1, -14), private_key)) ≈ circshift(a1, -14)
