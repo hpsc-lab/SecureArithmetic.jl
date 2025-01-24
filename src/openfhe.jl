@@ -34,7 +34,9 @@ See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref)
 function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
                                      PlainVector{<:OpenFHEBackend},
                                      SecureMatrix{<:OpenFHEBackend},
-                                     PlainMatrix{<:OpenFHEBackend}})
+                                     PlainMatrix{<:OpenFHEBackend},
+                                     SecureArray{<:OpenFHEBackend},
+                                     PlainArray{<:OpenFHEBackend}})
     get_crypto_context(v.context)
 end
 
@@ -86,7 +88,11 @@ Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
 Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
 OpenFHE.
 
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref)
+Note: To ensure that all shifts for intrinsic operations are precomputed, use
+`init_array_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_array_rotation!`](@ref)
 """
 function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                         shifts)
@@ -116,24 +122,172 @@ function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
     nothing
 end
 
+############################################################################################
+# Array
+############################################################################################
 """
-    PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend})
+    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                         shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer})
 
-Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vector and a `context`
-object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
-not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
-resulting in [`SecureVector`](@ref).
+Generate all required rotation keys for use with `circshift` for the
+rotation index in `shift` using the `private_key`. The keys are stored in the given `context`.
 
-See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
-[`OpenFHEBackend`](@ref)
+Note: To precompute rotation keys for an exactly specified rotation index, use `init_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_rotation!`](@ref)
 """
-function PlainVector(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend})
+function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                              shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer}) where N
+    init_array_rotation!(context, private_key, [shift], shape)
+end
+
+"""
+    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                         shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
+                         shape::NTuple{N, Integer})
+
+Generate all required rotation keys for use with `circshift` for the
+rotation indexes in `shifts` using the `private_key`. The keys are stored in the given `context`.
+
+Note: To precompute rotation keys for exactly specified rotation indexes, use `init_rotation!`.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`init_rotation!`](@ref)
+"""
+function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                              shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
+                              shape::NTuple{N, Integer}) where N
     cc = get_crypto_context(context)
-    plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
-    capacity = OpenFHE.GetSlots(plaintext)
-    plain_vector = PlainVector(plaintext, length(data), capacity, context)
+    # Get shifts for precompilation
+    shifts_ = get_shifts_array(context, shifts, shape)
+    # All shifts stored in shifts_ correspond to Base.circshift, but to use with OpenFHE, all shifts
+    # have to be negated.
+    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -unique(shifts_))
 
-    plain_vector
+    nothing
+end
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Tuple{<:Integer}},
+                          shape::Tuple{Integer})
+    get_shifts_array(context, getproperty.(shifts,1), shape)
+end
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Integer},
+                          shape::Tuple{Integer})
+    # extract capacity
+    cc = get_crypto_context(context)
+    capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
+    # length of an array
+    array_length = prod(shape)
+    # length of short array
+    short_length = array_length % capacity
+    # empty places in short array
+    empty_places = capacity - short_length
+    # number of ciphertexts in array
+    n_ciphertexts = Int(ceil(array_length/capacity))
+    # minimal required shift
+    shifts = shifts .% array_length
+    # store all openfhe shifts to enable
+    shifts_ = []
+    # iterate over all shifts
+    for i in range(1, length(shifts))
+        # convert negative shift to positive one
+        if shifts[i] < 0
+            shifts[i] = array_length + shifts[i]
+        end
+        # add all shifts from implementation of rotate function
+        shifts[i] += empty_places
+        shift1 = div(shifts[i], capacity)
+        shift2 = shifts[i] - capacity * shift1
+        push!(shifts_, shift2)
+        if empty_places != 0
+            push!(shifts_, short_length)
+            if shift1 % n_ciphertexts == 0
+                push!(shifts_, shift2 - empty_places)
+            else
+                push!(shifts_, shift2 + short_length)
+            end
+        end
+    end
+
+    shifts_
+end
+
+#=function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
+                          shape::NTuple{N, Integer}) where N
+    
+    # calculate length of each dimension
+    lengths = ones(Int, N)
+    for i in range(2, N)
+        lengths[i] = prod(shape[1:i-1])
+    end
+    # assemble 1d shifts
+    shifts_1d = Int[]
+    for shift in shifts
+        # use mutable type
+        shift = collect(shift)
+        # minimal required shift
+        shift = shift .% shape
+        # convert negative shift to positive
+        for i in range(1, N)
+            if shift[i] < 0
+                shift[i] = shape[i] + shift[i]
+            end
+        end
+        # shift for each dimension
+        shift1 = zeros(Int, N)
+        for i in range(1, N-1)
+            shift1[i] = shift[i] * lengths[i]
+            push!(shifts_1d, shift1[i] - lengths[i+1])
+        end
+        push!(shifts_1d, shift[end] * lengths[end])
+    end
+
+    get_shifts_array(context, shifts_1d, (prod(shape),))
+end=#
+
+function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
+    shape::NTuple{N, Integer}) where N
+
+    # calculate length of each dimension
+    lengths = ones(Int, N)
+    for i in range(2, N)
+        lengths[i] = prod(shape[1:i-1])
+    end
+    # assemble 1d shifts
+    shifts_1d = Int[]
+    for shift in shifts
+        # use mutable type
+        shift = collect(shift)
+        # minimal required shift
+        shift = shift .% shape
+        # convert negative shift to positive
+        for i in range(1, N)
+            if shift[i] < 0
+                shift[i] = shape[i] + shift[i]
+            end
+        end
+        # shift for each dimension
+        shift1 = zeros(Int, N)
+        for i in range(1, N)
+            shift1[i] = shift[i] * lengths[i]
+        end
+        # shift for main part of array
+        main_shift = sum(shift1)
+        push!(shifts_1d, sum(shift1))
+        # all possible combinations of dimensions
+        combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+        # shifts to retrieve cyclicity
+        for i in combinations
+            push!(shifts_1d, main_shift)
+            for j in i
+                shifts_1d[end] -= lengths[j+1]
+            end
+        end
+    end
+
+    get_shifts_array(context, shifts_1d, (prod(shape),))
 end
 
 """
@@ -148,94 +302,166 @@ See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`de
 [`OpenFHEBackend`](@ref)
 """
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
-    PlainVector(convert(Vector{Float64}, data), context)
-end
-
-function Base.show(io::IO, v::PlainVector{<:OpenFHEBackend})
-    print(io, collect(v))
-end
-
-function Base.show(io::IO, ::MIME"text/plain", v::PlainVector{<:OpenFHEBackend})
-    print(io, v.length, "-element PlainVector{OpenFHEBackend}:\n")
-    Base.print_matrix(io, collect(v))
+    PlainArray(data, context)                    
 end
 
 """
-    collect(v::PlainVector{<:OpenFHEBackend})
+    PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
 
-Decode and return the real-valued data contained in `v`.
-
-See also: [`PlainVector`](@ref), [`OpenFHEBackend`](@ref)
+Constructor for data type [`PlainMatrix`](@ref) takes an unencrypted `data` matrix and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainMatrix`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureMatrix`](@ref).
+    
+See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
 """
-function Base.collect(v::PlainVector{<:OpenFHEBackend})
-    collect(OpenFHE.GetRealPackedValue(v.data)[1:v.length])
+function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
+    PlainArray(data, context)                    
 end
 
-"""
-    level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
-
-Return the number of scalings, referred to as the level, performed over `v`.
-
-See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`OpenFHEBackend`](@ref)
-"""
-function level(v::Union{SecureVector{<:OpenFHEBackend}, PlainVector{<:OpenFHEBackend}})
-    Int(OpenFHE.GetLevel(v.data))
-end
-
-function encrypt_impl(data::Vector{<:Real}, public_key::PublicKey,
-                      context::SecureContext{<:OpenFHEBackend})
-    plain_vector = PlainVector(data, context)
-    secure_vector = encrypt(plain_vector, public_key)
-
-    secure_vector
-end
-
-function encrypt_impl(plain_vector::PlainVector{<:OpenFHEBackend}, public_key::PublicKey)
-    context = plain_vector.context
+function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
+                    shape::Tuple)
     cc = get_crypto_context(context)
-    ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_vector.data)
-    capacity = OpenFHE.GetSlots(ciphertext)
-    secure_vector = SecureVector(ciphertext, length(plain_vector), capacity, context)
+    capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
+    n_vectors = ceil(Int, length(data)/capacity)
+    plaintexts = OpenFHE.Plaintext[]
+    lengths = Int[]
+    for i in range(1, n_vectors)
+        start = (i-1)*capacity + 1
+        stop = min(i*capacity, length(data))
+        push!(plaintexts, OpenFHE.MakeCKKSPackedPlaintext(cc, data[start:stop]))
+        push!(lengths, stop - start + 1)
+    end
+    capacities = OpenFHE.GetSlots.(plaintexts)
+    plain_array = PlainArray(plaintexts, shape, lengths, capacities, context)
 
-    secure_vector
+    plain_array
 end
 
-function decrypt_impl!(plain_vector::PlainVector{<:OpenFHEBackend},
-                       secure_vector::SecureVector{<:OpenFHEBackend},
-                       private_key::PrivateKey)
-    cc = get_crypto_context(secure_vector)
-    OpenFHE.Decrypt(cc, private_key.private_key, secure_vector.data,
-                    plain_vector.data)
-
-    plain_vector
-end
-
-function decrypt_impl(secure_vector::SecureVector{<:OpenFHEBackend},
-                      private_key::PrivateKey)
-    context = secure_vector.context
-    plain_vector = PlainVector(OpenFHE.Plaintext(), length(secure_vector),
-                               capacity(secure_vector), context)
-
-    decrypt!(plain_vector, secure_vector, private_key)
+function PlainArray(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend},
+                    shape::Tuple)
+    PlainArray(Vector{Float64}(data), context, shape)
 end
 
 """
-    bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend}, num_iterations = 1,
+    PlainArray(data::Array{<:Real}, context::SecureContext{<:OpenFHEBackend})
+
+Constructor for data type [`PlainArray`](@ref) takes an unencrypted `data` array and a `context`
+object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainArray`](@ref) with encoded but
+not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
+resulting in [`SecureArray`](@ref).
+    
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
+[`OpenFHEBackend`](@ref)
+"""
+function PlainArray(data::Array{<:Real}, context::SecureContext{<:OpenFHEBackend})
+    PlainArray(Vector{Float64}(vec(data)), context, size(data))
+end
+
+function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
+    print(io, collect(pa))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", pa::PlainArray{<:OpenFHEBackend})
+    print(io, pa.shape, "-shaped PlainArray{OpenFHEBackend}:\n")
+    Base.print_matrix(io, collect(pa))
+end
+
+"""
+    collect(plain_array::PlainArray{<:OpenFHEBackend})
+
+Decode and return the real-valued data contained in `plain_array`.
+
+See also: [`PlainArray`](@ref), [`OpenFHEBackend`](@ref)
+"""
+function Base.collect(plain_array::PlainArray{<:OpenFHEBackend})
+    data = Vector.(OpenFHE.GetRealPackedValue.(plain_array.data))
+    keepat!.(data, range.(1, plain_array.lengths))
+    data = reduce(vcat, data)
+
+    Array{Float64, length(plain_array.shape)}(reshape(data, plain_array.shape))
+end
+
+
+"""
+    level(a::Union{SecureArray{<:OpenFHEBackend}, PlainArray{<:OpenFHEBackend}})
+
+Return the number of scalings, referred to as the level, performed over `a`.
+
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`OpenFHEBackend`](@ref)
+"""
+function level(a::Union{SecureArray{<:OpenFHEBackend}, PlainArray{<:OpenFHEBackend}})
+    maximum(Int.(OpenFHE.GetLevel.(a.data)))
+end
+
+function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
+                      context::SecureContext{<:OpenFHEBackend})
+    plain_array = PlainArray(data, context)
+    secure_array = encrypt(plain_array, public_key)
+
+    secure_array
+end
+
+function encrypt_impl(plain_array::PlainArray{<:OpenFHEBackend}, public_key::PublicKey)
+    context = plain_array.context
+    cc = get_crypto_context(context)
+    ciphertexts = OpenFHE.Ciphertext[]
+    for pv in plain_array.data
+        push!(ciphertexts, OpenFHE.Encrypt(cc, public_key.public_key, pv))
+    end
+    capacities = OpenFHE.GetSlots.(ciphertexts)
+    secure_array = SecureArray(ciphertexts, plain_array.shape, plain_array.lengths,
+                               capacities, context)
+
+    secure_array
+end
+
+function decrypt_impl!(plain_array::PlainArray{<:OpenFHEBackend},
+                       secure_array::SecureArray{<:OpenFHEBackend},
+                       private_key::PrivateKey)
+    cc = get_crypto_context(secure_array)
+    for i in range(1, length(secure_array.data))
+        OpenFHE.Decrypt(cc, private_key.private_key, secure_array.data[i],
+                        plain_array.data[i])
+    end
+
+    plain_array
+end
+
+function decrypt_impl(secure_array::SecureArray{<:OpenFHEBackend},
+                      private_key::PrivateKey)
+    context = secure_array.context
+    plaintexts = Vector{OpenFHE.Plaintext}(undef, length(secure_array.data))
+    for i in range(1, length(plaintexts))
+        plaintexts[i] = OpenFHE.Plaintext()
+    end
+    plain_array = PlainArray(plaintexts, size(secure_array), secure_array.lengths, 
+                             secure_array.capacities, context)
+
+    decrypt!(plain_array, secure_array, private_key)
+end
+
+"""
+    bootstrap!(secure_array::SecureArray{<:OpenFHEBackend}, num_iterations = 1,
                precision = 0)
      
-Refresh a given `secure_vector` to increase the multiplication depth. Supported for CKKS only.
+Refresh a given `secure_array` to increase the multiplication depth. Supported for CKKS only.
 Please refer to the OpenFHE documentation for details on the arguments `num_iterations` and
 `precision`.
 
-See also: [`SecureVector`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
+See also: [`SecureArray`](@ref), [`OpenFHEBackend`](@ref), [`init_bootstrapping!`](@ref)
 """
-function bootstrap!(secure_vector::SecureVector{<:OpenFHEBackend}, num_iterations = 1,
+function bootstrap!(secure_array::SecureArray{<:OpenFHEBackend}, num_iterations = 1,
                     precision = 0)
-    context = secure_vector.context
+    context = secure_array.context
     cc = get_crypto_context(context)
-    secure_vector.data = OpenFHE.EvalBootstrap(cc, secure_vector.data, num_iterations, precision)
+    Threads.@threads for i in range(1, length(secure_array.data))
+        secure_array.data[i] = OpenFHE.EvalBootstrap(cc, secure_array.data[i],
+                                                     num_iterations, precision)
+    end
 
-    secure_vector
+    secure_array
 end
 
 
@@ -243,450 +469,466 @@ end
 # Arithmetic operations
 ############################################################################################
 
-function add(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv1)
-    ciphertext = OpenFHE.EvalAdd(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, length(sv1), capacity(sv1), sv1.context)
+function add(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa1)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
+    Threads.@threads for i in range(1, length(sa1.data))
+        ciphertexts[i] = OpenFHE.EvalAdd(cc, sa1.data[i], sa2.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
 
-    secure_vector
+    secure_array
 end
 
-function add(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalAdd(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function add(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], pa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function add(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalAdd(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], scalar)
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function subtract(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv1)
-    ciphertext = OpenFHE.EvalSub(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, length(sv1), capacity(sv1), sv1.context)
+function subtract(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa1)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
+    Threads.@threads for i in range(1, length(sa1.data))
+        ciphertexts[i] = OpenFHE.EvalSub(cc, sa1.data[i], sa2.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
 
-    secure_vector
+    secure_array
 end
 
-function subtract(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSub(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function subtract(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], pa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function subtract(pv::PlainVector{<:OpenFHEBackend}, sv::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSub(cc, pv.data, sv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function subtract(pa::PlainArray{<:OpenFHEBackend}, sa::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalSub(cc, pa.data[i], sa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function subtract(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSub(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function subtract(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], scalar)
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function subtract(scalar::Real, sv::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalSub(cc, scalar, sv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function subtract(scalar::Real, sa::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalSub(cc, scalar, sa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function negate(sv::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalNegate(cc, sv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function negate(sa::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalNegate(cc, sa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function multiply(sv1::SecureVector{<:OpenFHEBackend}, sv2::SecureVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv1)
-    ciphertext = OpenFHE.EvalMult(cc, sv1.data, sv2.data)
-    secure_vector = SecureVector(ciphertext, length(sv1), capacity(sv1), sv1.context)
+function multiply(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa1)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
+    Threads.@threads for i in range(1, length(sa1.data))
+        ciphertexts[i] = OpenFHE.EvalMult(cc, sa1.data[i], sa2.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
 
-    secure_vector
+    secure_array
 end
 
-function multiply(sv::SecureVector{<:OpenFHEBackend}, pv::PlainVector{<:OpenFHEBackend})
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalMult(cc, sv.data, pv.data)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function multiply(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], pa.data[i])
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function multiply(sv::SecureVector{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sv)
-    ciphertext = OpenFHE.EvalMult(cc, sv.data, scalar)
-    secure_vector = SecureVector(ciphertext, length(sv), capacity(sv), sv.context)
+function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
+    cc = get_crypto_context(sa)
+    ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
+    Threads.@threads for i in range(1, length(sa.data))
+        ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], scalar)
+    end
+    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
 
-    secure_vector
+    secure_array
 end
 
-function rotate(sv::SecureVector{<:OpenFHEBackend}, shift; wrap_by)
-    cc = get_crypto_context(sv)
-
-    # We use `-shift` to match Julia's usual `circshift` direction
-    ciphertext_rotated = OpenFHE.EvalRotate(cc, sv.data, -shift)
-
-    if wrap_by == :length && length(sv) < capacity(sv)
-        # Mask rotated ciphertext
-        mask_rotated = zeros(capacity(sv))
-        if shift < 0
-            first = 1
-            last = length(sv) - abs(shift)
-            mask_rotated[first:last] .= 1
-        else
-            first = abs(shift) + 1
-            last = length(sv)
-            mask_rotated[first:last] .= 1
-        end
-        plaintext1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask_rotated)
-        ciphertext1 = OpenFHE.EvalMult(cc, ciphertext_rotated, plaintext1)
-
-        # Compute remaining part of the ciphertext
-        shift_rest = -sign(shift) * (length(sv) - abs(shift))
-        ciphertext_rest = OpenFHE.EvalRotate(cc, sv.data, -shift_rest)
-
-        # Mask remaining part of the ciphertext
-        mask_rest = zeros(capacity(sv))
-        if shift < 0
-            first = length(sv) - abs(shift) + 1
-            last = length(sv)
-            mask_rest[first:last] .= 1
-        else
-            first = 1
-            last = abs(shift)
-            mask_rest[first:last] .= 1
-        end
-        plaintext2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask_rest)
-        ciphertext2 = OpenFHE.EvalMult(cc, ciphertext_rest, plaintext2)
-
-        ciphertext_final = OpenFHE.EvalAdd(cc, ciphertext1, ciphertext2)
-        secure_vector = SecureVector(ciphertext_final, length(sv), capacity(sv),
-                                     sv.context)
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Union{Integer, Tuple{Integer}}; wrap_by)
+    # wrap by capacity makes sense only for single ciphertext
+    if wrap_by == :capacity && length(sa.data) == 1
+        cc = get_crypto_context(sa)
+        # We use `-shift` to match Julia's usual `circshift` direction
+        ciphertext_rotated = OpenFHE.EvalRotate(cc, sa.data[1], -shift[1])
+        return SecureArray([ciphertext_rotated], size(sa), sa.lengths, sa.capacities, sa.context)
     else
-        # If wrapping by capacity is requested and length is less than capacity
-        secure_vector = SecureVector(ciphertext_rotated, length(sv), capacity(sv),
-                                     sv.context)
+        return rotate(sa, shift[1])
     end
-
-    secure_vector
 end
 
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Tuple{Integer})
+    rotate(sa, shift[1])
+end
 
-############################################################################################
-# Matrix
-############################################################################################
-
-"""
-    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                          shifts, shape)
-
-Generate rotation keys for matrix rotation with `OpenFHE.EvalRotate` using the `private_key` and for the
-rotation indexes in `shifts`.
-`shifts` is a pair of integers given as a tuple, or a list of tuples of integers.
-The keys are stored in the given
-`context`. A positive shift defines a rotation to the right/bottom, e.g., a rotation with shift `(1, 0)`:
-[1 2 3; 4 5 6; 7 8 9] -> [7 8 9; 1 2 3; 4 5 6].
-Negative shifts define rotation to the left/top, e.g., a rotation with a shift `(0, -1)`:
-[1 2 3; 4 5 6; 7 8 9] -> [3 1 2; 6 4 5; 9 7 8].
-"""
-function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                               shifts, shape)
-    cc = get_crypto_context(context)
-    shifts_ = []
-    nrows, ncols = shape
-    for (shift_row, shift_col) in shifts
-        # minimum required shift
-        shift_row %= nrows
-        shift_col %= ncols
-        # appropriate shift for matrix packed in vector
-        shift = []
-        if shift_row == 0 && shift_col != 0
-            # Since the matrix is saved in a vector in column-major order, only one rotation is
-            # required for column shifting. 
-            shift = [shift_col*nrows]
-        else
-            # In the general case, in addition to column shifting, a shift within each column is
-            # required. Since this shift inside a column must be circular, two rotations
-            # must be performed (similar to the circshift for SecureVector).
-            shift = [shift_row+shift_col*nrows, -sign(shift_row)*(nrows-abs(shift_row))+shift_col*nrows]
-        end
-        append!(shifts_, shift)
-        # additional shift required in case of rotation in shift_col direction
-        if shift_col != 0
-            # Circularity of rotation within a single column was already ensured. The following
-            # shift is necessary to maintain the circularity of column shifting, see circshift for
-            # SecureVector.
-            shift_rest = -sign.(shift) .* (nrows*ncols .- abs.(shift))
-            append!(shifts_, shift_rest)
-        end
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
+    # crypto context
+    cc = get_crypto_context(sa.context)
+    # minimal required shift
+    shift = shift % length(sa)
+    # convert negative shift to positive one
+    if shift < 0
+        shift = length(sa) + shift
     end
-    # All shifts stored in shifts_ correspond to Base.circshift, but to use with OpenFHE, all shifts
-    # have to be negated.
-    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts_)
-
-    nothing
-end
-function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                               shift::Tuple{<:Integer, <:Integer}, shape)
-    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key, [shift], shape)
-end
-
-function PlainMatrix(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend},
-                     shape::Tuple{Int, Int})
-    cc = get_crypto_context(context)
-    plaintext = OpenFHE.MakeCKKSPackedPlaintext(cc, data)
-    capacity = OpenFHE.GetSlots(plaintext)
-    plain_matrix = PlainMatrix(plaintext, shape, capacity, context)
-
-    plain_matrix
-end
-
-function PlainMatrix(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend},
-                     shape::Tuple{Int, Int})
-    PlainMatrix(Vector{Float64}(data), context, shape)
-end
-
-function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
-    PlainMatrix(Vector{Float64}(vec(data)), context, size(data))
-end
-
-function Base.show(io::IO, m::PlainMatrix{<:OpenFHEBackend})
-    print(io, collect(m))
-end
-
-function Base.show(io::IO, ::MIME"text/plain", m::PlainMatrix{<:OpenFHEBackend})
-    print(io, m.shape, "-shaped PlainMatrix{OpenFHEBackend}:\n")
-    Base.print_matrix(io, collect(m))
-end
-
-function Base.collect(plain_matrix::PlainMatrix{<:OpenFHEBackend})
-    data = OpenFHE.GetRealPackedValue(plain_matrix.data)[1:length(plain_matrix)]
-    Matrix{Float64}(reshape(data, plain_matrix.shape))
-end
-
-function level(m::Union{SecureMatrix{<:OpenFHEBackend}, PlainMatrix{<:OpenFHEBackend}})
-    Int(OpenFHE.GetLevel(m.data))
-end
-
-function encrypt_impl(data::Matrix{<:Real}, public_key::PublicKey,
-                      context::SecureContext{<:OpenFHEBackend})
-    plain_matrix = PlainMatrix(data, context)
-    secure_matrix = encrypt(plain_matrix, public_key)
-
-    secure_matrix
-end
-
-function encrypt_impl(plain_matrix::PlainMatrix{<:OpenFHEBackend}, public_key::PublicKey)
-    context = plain_matrix.context
-    cc = get_crypto_context(context)
-    ciphertext = OpenFHE.Encrypt(cc, public_key.public_key, plain_matrix.data)
-    capacity = OpenFHE.GetSlots(ciphertext)
-    secure_matrix = SecureMatrix(ciphertext, plain_matrix.shape, capacity, context)
-
-    secure_matrix
-end
-
-function decrypt_impl!(plain_matrix::PlainMatrix{<:OpenFHEBackend},
-                       secure_matrix::SecureMatrix{<:OpenFHEBackend},
-                       private_key::PrivateKey)
-    cc = get_crypto_context(secure_matrix)
-    OpenFHE.Decrypt(cc, private_key.private_key, secure_matrix.data,
-                    plain_matrix.data)
-
-    plain_matrix
-end
-
-function decrypt_impl(secure_matrix::SecureMatrix{<:OpenFHEBackend},
-                      private_key::PrivateKey)
-    context = secure_matrix.context
-    plain_matrix = PlainMatrix(OpenFHE.Plaintext(), size(secure_matrix),
-                               capacity(secure_matrix), context)
-
-    decrypt!(plain_matrix, secure_matrix, private_key)
-end
-
-function bootstrap!(secure_matrix::SecureMatrix{<:OpenFHEBackend})
-    context = secure_matrix.context
-    cc = get_crypto_context(context)
-    secure_matrix.data = OpenFHE.EvalBootstrap(cc, secure_matrix.data)
-
-    secure_matrix
-end
-
-
-############################################################################################
-# Arithmetic operations
-############################################################################################
-
-function add(sm1::SecureMatrix{<:OpenFHEBackend}, sm2::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm1)
-    ciphertext = OpenFHE.EvalAdd(cc, sm1.data, sm2.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm1), capacity(sm1), sm1.context)
-
-    secure_matrix
-end
-
-function add(sm::SecureMatrix{<:OpenFHEBackend}, pm::PlainMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalAdd(cc, sm.data, pm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function add(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalAdd(cc, sm.data, scalar)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function subtract(sm1::SecureMatrix{<:OpenFHEBackend}, sm2::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm1)
-    ciphertext = OpenFHE.EvalSub(cc, sm1.data, sm2.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm1), capacity(sm1), sm1.context)
-
-    secure_matrix
-end
-
-function subtract(sm::SecureMatrix{<:OpenFHEBackend}, pm::PlainMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalSub(cc, sm.data, pm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function subtract(pm::PlainMatrix{<:OpenFHEBackend}, sm::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalSub(cc, pm.data, sm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function subtract(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalSub(cc, sm.data, scalar)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function subtract(scalar::Real, sm::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalSub(cc, scalar, sm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function negate(sm::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalNegate(cc, sm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function multiply(sm1::SecureMatrix{<:OpenFHEBackend}, sm2::SecureMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm1)
-    ciphertext = OpenFHE.EvalMult(cc, sm1.data, sm2.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm1), capacity(sm1), sm1.context)
-
-    secure_matrix
-end
-
-function multiply(sm::SecureMatrix{<:OpenFHEBackend}, pm::PlainMatrix{<:OpenFHEBackend})
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalMult(cc, sm.data, pm.data)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function multiply(sm::SecureMatrix{<:OpenFHEBackend}, scalar::Real)
-    cc = get_crypto_context(sm)
-    ciphertext = OpenFHE.EvalMult(cc, sm.data, scalar)
-    secure_matrix = SecureMatrix(ciphertext, size(sm), capacity(sm), sm.context)
-
-    secure_matrix
-end
-
-function rotate(sm::SecureMatrix{<:OpenFHEBackend}, shift)
-    # operate with data stored in matrix in form of vector
-    sv = SecureVector(sm.data, length(sm), sm.capacity, sm.context)
-    # minimum required shift
-    shift = shift .% size(sm)
-    shift_row, shift_col = shift
-    nrows, ncols = size(sm)
-    # split algorithm in several cases depending on shift
-    if shift_row == 0
-        shift_main = shift_col*nrows
-        sv = circshift(sv, shift_main; wrap_by=:length)
+    # operate with data stored as a vector of ciphertexts
+    sv = sa.data
+    # only the last vector can be smaller than capacity, export capacity and length
+    vec_capacity = sa.capacities[end]
+    short_length = sa.lengths[end]
+    empty_places = vec_capacity - short_length
+    # update required shift with respect of empty places in last vector
+    shift += empty_places
+    # shift secure vectors, so that shift is only required in each secure vector
+    # and between direct neighbours
+    shift1 = div(shift, vec_capacity)
+    sv = circshift(sv, shift1)
+    # shift for individual vectors
+    shift2 = shift - vec_capacity * shift1
+    # if the last vector is also full, rotation is simpler
+    if empty_places == 0
+        # shift each vector
+        Threads.@threads for i in range(1, length(sv))
+            sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
+        end
+        # first shift2 elements of each vector have to be moved 
+        # to the first shift2 elements of next vector if there are more than one ciphertexts 
+        if length(sv) > 1
+            sv_new = similar(sv)
+            # mask for fist shift2 elements of each vector
+            mask1 = zeros(vec_capacity)
+            mask1[1:shift2] .= 1
+            mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
+            # mask for remaining part of each vector
+            mask2 = zeros(vec_capacity)
+            mask2[shift2+1:end] .= 1
+            mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
+            Threads.@threads for i in range(1, length(sv))
+                sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
+                                            OpenFHE.EvalMult(cc, sv[i], mask2))
+            end
+            sv = sv_new
+        end
+    # next case when after rotating a whole array (not individual ciphertexts) 
+    # short vector is already the last one 
+    elseif shift1 % length(sv) == 0
+        # if short vector is at the end, shift does not need to be corrected due to its empty places 
+        # (except for the short vector), change the shift back
+        shift2 -= empty_places
+        # rotate all vectors except the last one
+        Threads.@threads for i in range(1, length(sv)-1)
+            sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
+        end
+        # rotate the last considering empty places
+        sv[end] = OpenFHE.EvalRotate(cc, sv[end], -(shift2 + empty_places))
+        # first shift2 elements of each vector have to be moved to the next one and rotate the last
+        # vector additionally
+        sv_new = similar(sv)
+        # mask for fist shift2 elements of each vector
+        mask1 = zeros(vec_capacity)
+        mask1[1:shift2] .= 1
+        mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
+        # mask for remaining part of each vector
+        mask2 = zeros(vec_capacity)
+        mask2[shift2+1:end] .= 1
+        mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
+        Threads.@threads for i in range(1, length(sv)-1)
+            sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
+                                        OpenFHE.EvalMult(cc, sv[i], mask2))
+        end
+        # The last vector have to be also additionally rotated by its length, so that elements stay
+        # at correct position
+        sv_new[end] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[end], mask1),
+                                      OpenFHE.EvalMult(cc, OpenFHE.EvalRotate(cc, sv[end], -short_length), mask2))
+        sv = sv_new
+    # The last case when short vector is not the last one and its empty places have to be filled,
+    # so that the last vector still the only short one
     else
-        # mask for main part of single column
-        mask_part = zeros(nrows)
-        if shift_row > 0
-            first = 1
-            last = nrows - shift_row
-            mask_part[first:last] .= 1
-        else
-            first = -shift_row + 1
-            mask_part[first:end] .= 1
+        # first shift1 vectors have to be rotated by shift2
+        Threads.@threads for i in range(1, shift1)
+            sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
         end
-        # repeat mask for each column
-        mask = repeat(mask_part, outer=ncols)
-        plaintext1 = PlainVector(mask, sm.context)
-        # shift for main part
-        shift_main = shift_row + shift_col * nrows
-
-        # mask for rest part of single column
-        mask_part_rest = zeros(nrows)
-        if shift_row > 0
-            first = nrows - shift_row + 1
-            mask_part_rest[first:end] .= 1
-        else
-            first = 1
-            last = -shift_row
-            mask_part_rest[first:last] .= 1
+        # all other vectors except last one have to be rotated by shift2 + short_length to compensate
+        # empty places in array's middle
+        Threads.@threads for i in range(shift1+1, length(sv)-1)
+            sv[i] = OpenFHE.EvalRotate(cc, sv[i], -(shift2 + short_length))
         end
-        # repeat mask for each column
-        mask_rest = repeat(mask_part_rest, outer=ncols)
-        plaintext2 = PlainVector(mask_rest, sm.context)
-        # shift for rest part
-        shift_rest = -sign(shift_row)*(nrows - abs(shift_row)) + shift_col * nrows
-
-        # If shift_col == 0, it is sufficient to use wrap_by=:capacity to utilize lower
-        # multiplicative depth.
-        if shift_col == 0
-            sv = circshift(sv*plaintext1, shift_main; wrap_by=:capacity) +
-                 circshift(sv*plaintext2, shift_rest; wrap_by=:capacity)
-        else
-            sv = circshift(sv*plaintext1, shift_main; wrap_by=:length) +
-                 circshift(sv*plaintext2, shift_rest; wrap_by=:length)
+        # the last one is also shifted by shift2
+        sv[end] = OpenFHE.EvalRotate(cc, sv[end], -shift2)
+        # for all vectors before short first shift2 elements have to be moved from the previous vector
+        sv_new = similar(sv)
+        # mask for fist shift2 elements of each vector
+        mask1 = zeros(vec_capacity)
+        mask1[1:shift2] .= 1
+        mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
+        # mask for remaining part of each vector
+        mask2 = zeros(vec_capacity)
+        mask2[shift2+1:end] .= 1
+        mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
+        Threads.@threads for i in range(1, shift1-1)
+            sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
+                                        OpenFHE.EvalMult(cc, sv[i], mask2))
         end
+        # depending on how shift2 and short_length relate, several cases are possible
+        if shift2 == empty_places
+            # if after rotation last element of short vector is already on last place, it needs only first
+            # shift2 elements from previous vector
+            sv_new[shift1] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
+                                             OpenFHE.EvalMult(cc, sv[shift1], mask2))
+            # due to empty place in new last vector, it has to be rotated
+            sv_new[end] = OpenFHE.EvalRotate(cc, sv[end], -short_length)
+            # all other vectors are without changes
+            sv_new[shift1+1:end-1] = sv[shift1+1:end-1]
+        # if last element of short vector after circular shift has come back at front, it has to be moved
+        # to the next vector, as well as for all next vectors
+        elseif shift2 > empty_places
+            # move first shift2 elements to the short vector from previous
+            sv_new[shift1] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
+                                             OpenFHE.EvalMult(cc, sv[shift1], mask2))
+            # number of elements to shift from short vector to the next one
+            n_shift = shift2 - empty_places
+            # mask for first n_shift elements 
+            mask3 = zeros(vec_capacity)
+            mask3[1:n_shift] .= 1
+            mask3 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask3)
+            # mask for remaining part of each vector
+            mask4 = zeros(vec_capacity)
+            mask4[n_shift+1:end] .= 1
+            mask4 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask4)
+            # move n_shift elements starting from short vector upto last one
+            Threads.@threads for i in range(shift1+1, length(sv)-1)
+                sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i-1], mask3),
+                                            OpenFHE.EvalMult(cc, sv[i], mask4))
+            end
+            # last one has to be additionally rotated due to empty place
+            sv_new[end] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[end-1], mask3),
+                                          OpenFHE.EvalMult(cc, OpenFHE.EvalRotate(cc, sv[end], -short_length),
+                                                           mask4))
+        # if the last element of short vector didn't reach the end of vector, elements
+        # from previous vector have to be moved to the end of short vector
+        else
+            # number of elements to shift from next vector
+            n_shift = empty_places - shift2
+            # mask for short_length elements after shift2 elements
+            mask3 = zeros(vec_capacity)
+            mask3[1+shift2:short_length+shift2] .= 1
+            mask3 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask3)
+            # mask for last n_shift elements
+            mask4 = zeros(vec_capacity)
+            mask4[end-n_shift+1:end] .= 1
+            mask4 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask4)
+            # mask for first capacity-n_shift elements
+            mask5 = zeros(vec_capacity)
+            mask5[1:end-n_shift] .= 1
+            mask5 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask5)
+            # short vector is a combination first shift2 elements of previous vector,
+            # last n_shift elements of the next vector, and itself
+            sv_new[shift1] = OpenFHE.EvalAdd(cc,
+                                             OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
+                                                             OpenFHE.EvalMult(cc, sv[shift1], mask3)),
+                                             OpenFHE.EvalMult(cc, circshift(sv, -1)[shift1], mask4))
+            # All vectors after the short one upto prelast vector
+            # become last n_shift elements from the next vector
+            Threads.@threads for i in range(shift1+1, length(sv)-2)
+                sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i+1], mask4),
+                                            OpenFHE.EvalMult(cc, sv[i], mask5))
+            end
+            # last vector is rotated due to empty places
+            sv_new[end] = OpenFHE.EvalRotate(cc, sv[end], -short_length)
+            # prelast becomes n_shift elements from the last vector
+            # from positions shift2+1:shift2+n_shift
+            sv_new[end-1] =  OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv_new[end], mask4), OpenFHE.EvalMult(cc, sv[end-1], mask5))
+        end
+        # update vector
+        sv = sv_new
     end
 
-    SecureMatrix(sv.data, size(sm), capacity(sm), sm.context)
+    SecureArray(sv, size(sa), sa.lengths, sa.capacities, sa.context)
+end
+
+#=function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+    # use mutable type
+    shift = collect(shift)
+    # minimal required shift
+    shift = shift .% size(sa)
+    for i in range(1, N)
+        # convert negative shifts to positive
+        if shift[i] < 0
+            shift[i] = size(sa)[i] + shift[i]
+        end
+    end
+    shift1 = zeros(Int, N)
+    lengths = ones(Int, N)
+    for i in range(1, N)
+        # calculate length of each dimension
+        lengths[i] = prod(size(sa)[1:i-1])
+        # Shift for each dimension
+        shift1[i] = shift[i] * lengths[i]
+    end
+    # masks for incorrectly placed elements in each dimension
+    masks = []
+    anti_masks = []
+    # indices for array iteration
+    indices = Vector{Any}(undef, N)
+    for i in range(1, N-1)
+        push!(masks, zeros(size(sa)))
+        push!(anti_masks, zeros(size(sa)))
+        indices[:] .= range.(1, size(sa))
+        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        masks[i][indices...] .= 1.0
+        anti_masks[i] = 1 .- masks[i]
+    end
+    # convert masks to PlainArray's
+    for i in range(1, N-1)
+        masks[i] = PlainArray(vec(masks[i]), sa.context)
+        anti_masks[i] = PlainArray(vec(anti_masks[i]), sa.context)
+    end
+    # operate with N-dimensional array in form of 1D
+    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
+    # correct positions of elements in each dimension
+    for i in range(1, N-1)
+        if shift[i] != 0
+            sv = rotate(sv*anti_masks[i], shift1[i]) + rotate(sv * masks[i], shift1[i] - lengths[i+1])
+        end
+    end
+    sv = rotate(sv, shift1[end])
+
+    SecureArray(sv.data, size(sa), sa.lengths, sa.capacities, sa.context)
+end=#
+
+function compute_dimension_combinations(N::Integer, shift::Vector{<:Integer})
+    if N == 1
+        if shift[1] != 0
+            return [[1]]
+        else
+            return []
+        end
+    end
+    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+    if shift[N] != 0
+        n = length(combinations)
+        append!(combinations, push!.(copy.(combinations), N))
+        push!(combinations, [N])
+    end
+    return combinations
+end
+
+function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+    # use mutable type
+    shift = collect(shift)
+    # minimal required shift
+    shift = shift .% size(sa)
+    for i in range(1, N)
+        # convert negative shifts to positive
+        if shift[i] < 0
+            shift[i] = size(sa)[i] + shift[i]
+        end
+    end
+    shift1 = zeros(Int, N)
+    lengths = ones(Int, N)
+    for i in range(1, N)
+        # calculate length of each dimension
+        lengths[i] = prod(size(sa)[1:i-1])
+        # Shift for each dimension
+        shift1[i] = shift[i] * lengths[i]
+    end
+    # shift for main part
+    main_shift = sum(shift1)
+    # masks
+    masks = []
+    main_mask = ones(Int, size(sa))
+    # indices for array iteration
+    indices = Vector(undef, N)
+    # shifts to retrieve cyclicity
+    shift_masked = []
+    # compute all combinations of dimensions (except last one)
+    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+    # mask for main part
+    for i in range(1, N-1)
+        indices[:] .= range.(1, size(sa))
+        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        main_mask[indices...] .= 0
+    end
+    # masks to retrieve cyclicity
+    for i in combinations
+        push!(shift_masked, main_shift)
+        indices[:] .= range.(1, size(sa) .- shift)
+        indices[end] = range.(1, size(sa)[end])
+        for j in i
+            indices[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
+            shift_masked[end] -= lengths[j+1]
+        end
+        push!(masks, zeros(Int, size(sa)))
+        masks[end][indices...] .= 1
+    end
+    # convert masks to PlainArray's
+    main_mask = PlainArray(vec(main_mask), sa.context)
+    for i in range(1, length(masks))
+        masks[i] = PlainArray(vec(masks[i]), sa.context)
+    end
+    # operate with N-dimensional array in form of 1D
+    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
+    # apply main shift
+    sv_new = circshift(sv * main_mask, main_shift)
+    # correct positions of elements in each dimension combination
+    for i in range(1, length(masks))
+        sv_new += circshift(sv * masks[i], shift_masked[i])
+    end
+
+    SecureArray(sv_new.data, size(sa), sa.lengths, sa.capacities, sa.context)
 end
