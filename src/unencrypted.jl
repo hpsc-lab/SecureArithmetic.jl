@@ -79,7 +79,7 @@ resulting in [`SecureVector`](@ref).
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 """
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
-    PlainArray(data, context)                    
+    PlainArray(data, context)
 end
 
 """
@@ -93,7 +93,7 @@ resulting in [`SecureMatrix`](@ref).
 See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 """
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
-    PlainArray(data, context)                    
+    PlainArray(data, context)
 end
 
 """

@@ -31,7 +31,7 @@ function simple_array_operations(context)
     sa_shift1 = circshift(sa1, (0, 1, 0))
     sa_shift2 = circshift(sa1, (1, -1, 1))
 
-    # Perform the bootstrapping operation over a matrix. The goal is to increase the number of
+    # Perform the bootstrapping operation over an array. The goal is to increase the number of
     # levels remaining for HE computation.
     sa_after_bootstrap = bootstrap!(sa1)
 

@@ -21,23 +21,17 @@ function get_crypto_context(context::SecureContext{<:OpenFHEBackend})
     context.backend.crypto_context
 end
 """
-    get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
-                                PlainVector{<:OpenFHEBackend},
-                                SecureMatrix{<:OpenFHEBackend},
-                                PlainMatrix{<:OpenFHEBackend}})
+    get_crypto_context(a::Union{SecureArray{<:OpenFHEBackend},
+                                PlainArray{<:OpenFHEBackend}})
 
-Return a `OpenFHE.CryptoContext` object stored in `v`.
+Return a `OpenFHE.CryptoContext` object stored in `a`.
 
-See also: [`SecureContext`](@ref), [`SecureVector`](@ref), [`PlainVector`](@ref),
+See also: [`SecureContext`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref),
 [`OpenFHEBackend`](@ref)
 """
-function get_crypto_context(v::Union{SecureVector{<:OpenFHEBackend},
-                                     PlainVector{<:OpenFHEBackend},
-                                     SecureMatrix{<:OpenFHEBackend},
-                                     PlainMatrix{<:OpenFHEBackend},
-                                     SecureArray{<:OpenFHEBackend},
+function get_crypto_context(a::Union{SecureArray{<:OpenFHEBackend},
                                      PlainArray{<:OpenFHEBackend}})
-    get_crypto_context(v.context)
+    get_crypto_context(a.context)
 end
 
 """
@@ -88,7 +82,7 @@ Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
 Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
 OpenFHE.
 
-Note: To ensure that all shifts for intrinsic operations are precomputed, use
+Note: To ensure that all indexes for intrinsic operations are precomputed, use
 `init_array_rotation!`.
 
 See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
@@ -189,7 +183,7 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
     # minimal required shift
     shifts = shifts .% array_length
     # store all openfhe shifts to enable
-    shifts_ = []
+    shifts_ = Int[]
     # iterate over all shifts
     for i in range(1, length(shifts))
         # convert negative shift to positive one
@@ -213,39 +207,6 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
 
     shifts_
 end
-
-#=function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
-                          shape::NTuple{N, Integer}) where N
-    
-    # calculate length of each dimension
-    lengths = ones(Int, N)
-    for i in range(2, N)
-        lengths[i] = prod(shape[1:i-1])
-    end
-    # assemble 1d shifts
-    shifts_1d = Int[]
-    for shift in shifts
-        # use mutable type
-        shift = collect(shift)
-        # minimal required shift
-        shift = shift .% shape
-        # convert negative shift to positive
-        for i in range(1, N)
-            if shift[i] < 0
-                shift[i] = shape[i] + shift[i]
-            end
-        end
-        # shift for each dimension
-        shift1 = zeros(Int, N)
-        for i in range(1, N-1)
-            shift1[i] = shift[i] * lengths[i]
-            push!(shifts_1d, shift1[i] - lengths[i+1])
-        end
-        push!(shifts_1d, shift[end] * lengths[end])
-    end
-
-    get_shifts_array(context, shifts_1d, (prod(shape),))
-end=#
 
 function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
     shape::NTuple{N, Integer}) where N
@@ -276,8 +237,14 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
         # shift for main part of array
         main_shift = sum(shift1)
         push!(shifts_1d, sum(shift1))
-        # all possible combinations of dimensions
-        combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+        # all possible combinations of dimensions (with non-zero shift)
+        combinations = Vector{Int}[]
+        for i in range(1, N-1)
+            if shift[i] != 0
+                append!(combinations, push!.(copy.(combinations), i))
+                push!(combinations, [i])
+            end
+        end
         # shifts to retrieve cyclicity
         for i in combinations
             push!(shifts_1d, main_shift)
@@ -302,7 +269,7 @@ See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`de
 [`OpenFHEBackend`](@ref)
 """
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:OpenFHEBackend})
-    PlainArray(data, context)                    
+    PlainArray(data, context)
 end
 
 """
@@ -317,22 +284,25 @@ See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`de
 [`OpenFHEBackend`](@ref)
 """
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:OpenFHEBackend})
-    PlainArray(data, context)                    
+    PlainArray(data, context)
 end
 
 function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBackend}, 
                     shape::Tuple)
     cc = get_crypto_context(context)
+    # capacity of a single plaintext
     capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
-    n_vectors = ceil(Int, length(data)/capacity)
+    # split data between plaintexts, only last one can be not full
+    n_plaintexts = ceil(Int, length(data)/capacity)
     plaintexts = OpenFHE.Plaintext[]
     lengths = Int[]
-    for i in range(1, n_vectors)
-        start = (i-1)*capacity + 1
-        stop = min(i*capacity, length(data))
-        push!(plaintexts, OpenFHE.MakeCKKSPackedPlaintext(cc, data[start:stop]))
-        push!(lengths, stop - start + 1)
+    for i in range(1, n_plaintexts)
+        first = (i-1)*capacity + 1
+        last = min(i*capacity, length(data))
+        push!(plaintexts, OpenFHE.MakeCKKSPackedPlaintext(cc, data[first:last]))
+        push!(lengths, last - first + 1)
     end
+    # capacities for each of plaintexts
     capacities = OpenFHE.GetSlots.(plaintexts)
     plain_array = PlainArray(plaintexts, shape, lengths, capacities, context)
 
@@ -613,10 +583,6 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Union{Integer, Tupl
     end
 end
 
-function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Tuple{Integer})
-    rotate(sa, shift[1])
-end
-
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # crypto context
     cc = get_crypto_context(sa.context)
@@ -650,7 +616,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         # to the first shift2 elements of next vector if there are more than one ciphertexts 
         if length(sv) > 1
             sv_new = similar(sv)
-            # mask for fist shift2 elements of each vector
+            # mask for first shift2 elements of each vector
             mask1 = zeros(vec_capacity)
             mask1[1:shift2] .= 1
             mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
@@ -679,7 +645,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         # first shift2 elements of each vector have to be moved to the next one and rotate the last
         # vector additionally
         sv_new = similar(sv)
-        # mask for fist shift2 elements of each vector
+        # mask for first shift2 elements of each vector
         mask1 = zeros(vec_capacity)
         mask1[1:shift2] .= 1
         mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
@@ -712,7 +678,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         sv[end] = OpenFHE.EvalRotate(cc, sv[end], -shift2)
         # for all vectors before short first shift2 elements have to be moved from the previous vector
         sv_new = similar(sv)
-        # mask for fist shift2 elements of each vector
+        # mask for first shift2 elements of each vector
         mask1 = zeros(vec_capacity)
         mask1[1:shift2] .= 1
         mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
@@ -760,7 +726,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
                                           OpenFHE.EvalMult(cc, OpenFHE.EvalRotate(cc, sv[end], -short_length),
                                                            mask4))
         # if the last element of short vector didn't reach the end of vector, elements
-        # from previous vector have to be moved to the end of short vector
+        # from next vector have to be moved to the end of short vector
         else
             # number of elements to shift from next vector
             n_shift = empty_places - shift2
@@ -801,73 +767,6 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     SecureArray(sv, size(sa), sa.lengths, sa.capacities, sa.context)
 end
 
-#=function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
-    # use mutable type
-    shift = collect(shift)
-    # minimal required shift
-    shift = shift .% size(sa)
-    for i in range(1, N)
-        # convert negative shifts to positive
-        if shift[i] < 0
-            shift[i] = size(sa)[i] + shift[i]
-        end
-    end
-    shift1 = zeros(Int, N)
-    lengths = ones(Int, N)
-    for i in range(1, N)
-        # calculate length of each dimension
-        lengths[i] = prod(size(sa)[1:i-1])
-        # Shift for each dimension
-        shift1[i] = shift[i] * lengths[i]
-    end
-    # masks for incorrectly placed elements in each dimension
-    masks = []
-    anti_masks = []
-    # indices for array iteration
-    indices = Vector{Any}(undef, N)
-    for i in range(1, N-1)
-        push!(masks, zeros(size(sa)))
-        push!(anti_masks, zeros(size(sa)))
-        indices[:] .= range.(1, size(sa))
-        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
-        masks[i][indices...] .= 1.0
-        anti_masks[i] = 1 .- masks[i]
-    end
-    # convert masks to PlainArray's
-    for i in range(1, N-1)
-        masks[i] = PlainArray(vec(masks[i]), sa.context)
-        anti_masks[i] = PlainArray(vec(anti_masks[i]), sa.context)
-    end
-    # operate with N-dimensional array in form of 1D
-    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
-    # correct positions of elements in each dimension
-    for i in range(1, N-1)
-        if shift[i] != 0
-            sv = rotate(sv*anti_masks[i], shift1[i]) + rotate(sv * masks[i], shift1[i] - lengths[i+1])
-        end
-    end
-    sv = rotate(sv, shift1[end])
-
-    SecureArray(sv.data, size(sa), sa.lengths, sa.capacities, sa.context)
-end=#
-
-function compute_dimension_combinations(N::Integer, shift::Vector{<:Integer})
-    if N == 1
-        if shift[1] != 0
-            return [[1]]
-        else
-            return []
-        end
-    end
-    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
-    if shift[N] != 0
-        n = length(combinations)
-        append!(combinations, push!.(copy.(combinations), N))
-        push!(combinations, [N])
-    end
-    return combinations
-end
-
 function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
     # use mutable type
     shift = collect(shift)
@@ -889,32 +788,39 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer})
     end
     # shift for main part
     main_shift = sum(shift1)
-    # masks
-    masks = []
-    main_mask = ones(Int, size(sa))
-    # indices for array iteration
-    indices = Vector(undef, N)
-    # shifts to retrieve cyclicity
-    shift_masked = []
-    # compute all combinations of dimensions (except last one)
-    combinations = compute_dimension_combinations(N-1, shift[1:N-1])
+    # indexes for array iteration
+    indexes = Vector(undef, N)
     # mask for main part
+    main_mask = ones(Int, size(sa))
     for i in range(1, N-1)
-        indices[:] .= range.(1, size(sa))
-        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
-        main_mask[indices...] .= 0
+        indexes[:] .= range.(1, size(sa))
+        indexes[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
+        main_mask[indexes...] .= 0
+    end
+    # compute all combinations of dimensions (except last one and with non-zero shift)
+    # to retrieve cyclicity
+    combinations = Vector{Int}[]
+    for i in range(1, N-1)
+        if shift[i] != 0
+            append!(combinations, push!.(copy.(combinations), i))
+            push!(combinations, [i])
+        end
     end
     # masks to retrieve cyclicity
+    masks = []
+    shift_masked = []
     for i in combinations
         push!(shift_masked, main_shift)
-        indices[:] .= range.(1, size(sa) .- shift)
-        indices[end] = range.(1, size(sa)[end])
+        indexes[:] .= range.(1, size(sa) .- shift)
+        indexes[end] = range.(1, size(sa)[end])
+        # correct indexes to include only elements that are
+        # shifted in the given combination i
         for j in i
-            indices[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
+            indexes[j] = (size(sa)[j] - shift[j] + 1):size(sa)[j]
             shift_masked[end] -= lengths[j+1]
         end
         push!(masks, zeros(Int, size(sa)))
-        masks[end][indices...] .= 1
+        masks[end][indexes...] .= 1
     end
     # convert masks to PlainArray's
     main_mask = PlainArray(vec(main_mask), sa.context)

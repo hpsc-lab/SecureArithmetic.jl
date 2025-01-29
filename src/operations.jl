@@ -4,7 +4,7 @@
 Encrypt `data` into a [`SecureArray`](@ref) using the `public_key` derived for the given
 `context`.
 
-See also: [`SecureArray`](@ref), [`decrypt`](@ref)
+See also: [`SecureArray`](@ref), [`PublicKey`](@ref), [`SecureContext`](@ref), [`decrypt`](@ref)
 """
 function encrypt(data::Array{<:Real}, public_key::PublicKey, context::SecureContext)
     encrypt_impl(data, public_key, context)
@@ -15,7 +15,7 @@ end
 
 Encrypt `plain_array` into a [`SecureArray`](@ref) using the `public_key`.
 
-See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref)
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`PublicKey`](@ref), [`decrypt`](@ref)
 """
 function encrypt(plain_array::PlainArray, public_key::PublicKey)
     encrypt_impl(plain_array, public_key)
@@ -27,7 +27,7 @@ end
 Decrypt `secure_array` using the `private_key` and store the result in the given
 `plain_array`.
 
-See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref)
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`PrivateKey`](@ref), [`decrypt`](@ref)
 """
 function decrypt!(plain_array::PlainArray, secure_array::SecureArray,
                   private_key::PrivateKey)
@@ -39,7 +39,7 @@ end
 
 Decrypt `secure_array` using the `private_key` and return the resulting `PlainArray`.
 
-See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`decrypt!`](@ref)
+See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`PrivateKey`](@ref), [`decrypt!`](@ref)
 """
 function decrypt(secure_array::SecureArray, private_key::PrivateKey)
     decrypt_impl(secure_array, private_key)

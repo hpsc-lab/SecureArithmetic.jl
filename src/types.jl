@@ -59,7 +59,7 @@ end
 """
     SecureArray{Backend, N, DataT}
 
-Holds an encrypted `N`-dimensional array as a vector of ciphertexts for arithmetic operations.
+Holds an encrypted `N`-dimensional array for arithmetic operations.
 Can be converted to a `PlainArray` using [`decrypt`](@ref).
 
 See also: [`PlainArray`](@ref), [`decrypt`](@ref)
@@ -70,7 +70,7 @@ struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     lengths::Vector{Int}
     capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
-    
+
     function SecureArray(data, shape, lengths, capacities,
                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
         new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
@@ -100,7 +100,7 @@ const SecureMatrix{Backend, DataT} = SecureArray{Backend, 2, DataT}
 """
     PlainArray{Backend, N, DataT}
 
-Holds an encoded - but not encrypted - `N`-dimensional array as a vector of plaintexts
+Holds an encoded - but not encrypted - `N`-dimensional array
 for arithmetic operations. Can be converted to a `SecureArray` using [`encrypt`](@ref).
 
 See also: [`SecureArray`](@ref), [`encrypt`](@ref)
@@ -111,7 +111,7 @@ struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     lengths::Vector{Int}
     capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
-    
+
     function PlainArray(data, shape, lengths, capacities,
                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
         new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
@@ -166,6 +166,13 @@ See also: [`capacity`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref)
 """
 Base.length(a::Union{PlainArray, SecureArray}) = prod(a.shape)
 
+"""
+    ndims(a::Union{PlainArray, SecureArray})
+
+Return the number of dimensions of `a`.
+
+See also: [`SecureArray`](@ref), [`PlainArray`](@ref)
+"""
 Base.ndims(a::Union{PlainArray, SecureArray}) = length(a.shape)
 
 """
