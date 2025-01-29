@@ -1,5 +1,5 @@
 # Add
-Base.:+(sa1::SecureArray, sa2::SecureArray) = add(sa1, sa2)
+Base.:+(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = add(sa1, sa2)
 Base.:+(sa::SecureArray, pa::PlainArray) = add(sa, pa)
 Base.:+(pa::PlainArray, sa::SecureArray) = add(sa, pa)
 Base.:+(sa::SecureArray, scalar::Real) = add(sa, scalar)

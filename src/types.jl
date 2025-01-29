@@ -66,7 +66,7 @@ See also: [`PlainArray`](@ref), [`decrypt`](@ref)
 """
 struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
-    shape::Tuple
+    shape::NTuple{N, Int}
     lengths::Vector{Int}
     capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
@@ -107,7 +107,7 @@ See also: [`SecureArray`](@ref), [`encrypt`](@ref)
 """
 struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
-    shape::Tuple
+    shape::NTuple{N, Int}
     lengths::Vector{Int}
     capacities::Vector{Int}
     context::SecureContext{CryptoBackendT}
