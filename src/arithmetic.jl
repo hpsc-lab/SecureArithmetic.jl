@@ -1,23 +1,23 @@
 # Add
 Base.:+(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = add(sa1, sa2)
-Base.:+(sa::SecureArray, pa::PlainArray) = add(sa, pa)
-Base.:+(pa::PlainArray, sa::SecureArray) = add(sa, pa)
+Base.:+(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = add(sa, pa)
+Base.:+(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = add(sa, pa)
 Base.:+(sa::SecureArray, scalar::Real) = add(sa, scalar)
 Base.:+(scalar::Real, sa::SecureArray) = add(sa, scalar)
 
 # Subtract
-Base.:-(sa1::SecureArray, sa2::SecureArray) = subtract(sa1, sa2)
-Base.:-(sa::SecureArray, pa::PlainArray) = subtract(sa, pa)
-Base.:-(pa::PlainArray, sa::SecureArray) = subtract(pa, sa)
+Base.:-(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = subtract(sa1, sa2)
+Base.:-(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = subtract(sa, pa)
+Base.:-(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(pa, sa)
 Base.:-(sa::SecureArray, scalar::Real) = subtract(sa, scalar)
 Base.:-(scalar::Real, sa::SecureArray) = subtract(scalar, sa)
 # Negate
 Base.:-(sa::SecureArray) = negate(sa)
 
 # Multiply
-Base.:*(sa1::SecureArray, sa2::SecureArray) = multiply(sa1, sa2)
-Base.:*(sa::SecureArray, pa::PlainArray) = multiply(sa, pa)
-Base.:*(pa::PlainArray, sa::SecureArray) = multiply(sa, pa)
+Base.:*(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = multiply(sa1, sa2)
+Base.:*(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = multiply(sa, pa)
+Base.:*(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = multiply(sa, pa)
 Base.:*(sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
 

@@ -67,13 +67,12 @@ See also: [`PlainArray`](@ref), [`decrypt`](@ref)
 struct SecureArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::NTuple{N, Int}
-    lengths::Vector{Int}
-    capacities::Vector{Int}
+    capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function SecureArray(data, shape, lengths, capacities,
+    function SecureArray(data, shape, capacity,
                          context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
+        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, capacity, context)
     end
 end
 
@@ -108,13 +107,12 @@ See also: [`SecureArray`](@ref), [`encrypt`](@ref)
 struct PlainArray{CryptoBackendT <: AbstractCryptoBackend, N, DataT}
     data::DataT
     shape::NTuple{N, Int}
-    lengths::Vector{Int}
-    capacities::Vector{Int}
+    capacity::Int
     context::SecureContext{CryptoBackendT}
 
-    function PlainArray(data, shape, lengths, capacities,
+    function PlainArray(data, shape, capacity,
                         context::SecureContext{CryptoBackendT}) where CryptoBackendT
-        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, lengths, capacities, context)
+        new{CryptoBackendT, length(shape), typeof(data)}(data, shape, capacity, context)
     end
 end
 
@@ -183,7 +181,7 @@ hold. Note that this might be more than its current [`length`](@ref).
 
 See also: [`length`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref)
 """
-capacity(a::Union{PlainArray, SecureArray}) = sum(a.capacities)
+capacity(a::Union{PlainArray, SecureArray}) = a.capacity
 
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17

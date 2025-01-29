@@ -311,16 +311,12 @@ function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBacke
     # split data between plaintexts, only last one can be not full
     n_plaintexts = ceil(Int, length(data)/capacity)
     plaintexts = OpenFHE.Plaintext[]
-    lengths = Int[]
     for i in range(1, n_plaintexts)
         first = (i-1)*capacity + 1
         last = min(i*capacity, length(data))
         push!(plaintexts, OpenFHE.MakeCKKSPackedPlaintext(cc, data[first:last]))
-        push!(lengths, last - first + 1)
     end
-    # capacities for each of plaintexts
-    capacities = OpenFHE.GetSlots.(plaintexts)
-    plain_array = PlainArray(plaintexts, shape, lengths, capacities, context)
+    plain_array = PlainArray(plaintexts, shape, capacity * n_plaintexts, context)
 
     plain_array
 end
@@ -363,10 +359,13 @@ See also: [`PlainArray`](@ref), [`OpenFHEBackend`](@ref)
 """
 function Base.collect(plain_array::PlainArray{<:OpenFHEBackend})
     data = Vector.(OpenFHE.GetRealPackedValue.(plain_array.data))
-    keepat!.(data, range.(1, plain_array.lengths))
+    plaintext_capacity = Int(capacity(plain_array) / length(plain_array.data))
+    empty_places = capacity(plain_array) - length(plain_array)
+    short_length = plaintext_capacity - empty_places
+    keepat!(data[end], 1:short_length)
     data = reduce(vcat, data)
 
-    Array{Float64, length(plain_array.shape)}(reshape(data, plain_array.shape))
+    Array{Float64, ndims(plain_array)}(reshape(data, plain_array.shape))
 end
 
 
@@ -396,9 +395,7 @@ function encrypt_impl(plain_array::PlainArray{<:OpenFHEBackend}, public_key::Pub
     for pv in plain_array.data
         push!(ciphertexts, OpenFHE.Encrypt(cc, public_key.public_key, pv))
     end
-    capacities = OpenFHE.GetSlots.(ciphertexts)
-    secure_array = SecureArray(ciphertexts, plain_array.shape, plain_array.lengths,
-                               capacities, context)
+    secure_array = SecureArray(ciphertexts, size(plain_array), capacity(plain_array), context)
 
     secure_array
 end
@@ -422,8 +419,7 @@ function decrypt_impl(secure_array::SecureArray{<:OpenFHEBackend},
     for i in range(1, length(plaintexts))
         plaintexts[i] = OpenFHE.Plaintext()
     end
-    plain_array = PlainArray(plaintexts, size(secure_array), secure_array.lengths, 
-                             secure_array.capacities, context)
+    plain_array = PlainArray(plaintexts, size(secure_array), capacity(secure_array), context)
 
     decrypt!(plain_array, secure_array, private_key)
 end
@@ -461,7 +457,7 @@ function add(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBacke
     Threads.@threads for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa1.data[i], sa2.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
+    secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
 
     secure_array
 end
@@ -472,7 +468,7 @@ function add(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend}
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], pa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -483,7 +479,7 @@ function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], scalar)
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -494,7 +490,7 @@ function subtract(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHE
     Threads.@threads for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa1.data[i], sa2.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
+    secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
 
     secure_array
 end
@@ -505,7 +501,7 @@ function subtract(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBac
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], pa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -516,7 +512,7 @@ function subtract(pa::PlainArray{<:OpenFHEBackend}, sa::SecureArray{<:OpenFHEBac
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, pa.data[i], sa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -527,7 +523,7 @@ function subtract(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], scalar)
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -538,7 +534,7 @@ function subtract(scalar::Real, sa::SecureArray{<:OpenFHEBackend})
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, scalar, sa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -549,7 +545,7 @@ function negate(sa::SecureArray{<:OpenFHEBackend})
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalNegate(cc, sa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -560,7 +556,7 @@ function multiply(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHE
     Threads.@threads for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa1.data[i], sa2.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa1), sa1.lengths, sa1.capacities, sa1.context)
+    secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
 
     secure_array
 end
@@ -571,7 +567,7 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBac
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], pa.data[i])
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -582,7 +578,7 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     Threads.@threads for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], scalar)
     end
-    secure_array = SecureArray(ciphertexts, size(sa), sa.lengths, sa.capacities, sa.context)
+    secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
 end
@@ -593,7 +589,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Union{Integer, Tupl
         cc = get_crypto_context(sa)
         # We use `-shift` to match Julia's usual `circshift` direction
         ciphertext_rotated = OpenFHE.EvalRotate(cc, sa.data[1], -shift[1])
-        return SecureArray([ciphertext_rotated], size(sa), sa.lengths, sa.capacities, sa.context)
+        return SecureArray([ciphertext_rotated], size(sa), capacity(sa), sa.context)
     else
         return rotate(sa, shift[1])
     end
@@ -611,9 +607,9 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # operate with data stored as a vector of ciphertexts
     sv = sa.data
     # only the last vector can be smaller than capacity, export capacity and length
-    vec_capacity = sa.capacities[end]
-    short_length = sa.lengths[end]
-    empty_places = vec_capacity - short_length
+    vec_capacity = Int(capacity(sa) / length(sa.data))
+    empty_places = capacity(sa) - length(sa)
+    short_length = vec_capacity - empty_places
     # update required shift with respect of empty places in last vector
     shift += empty_places
     # shift secure vectors, so that shift is only required in each secure vector
@@ -780,7 +776,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         sv = sv_new
     end
 
-    SecureArray(sv, size(sa), sa.lengths, sa.capacities, sa.context)
+    SecureArray(sv, size(sa), capacity(sa), sa.context)
 end
 
 function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
@@ -844,7 +840,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer})
         masks[i] = PlainArray(vec(masks[i]), sa.context)
     end
     # operate with N-dimensional array in form of 1D
-    sv = SecureArray(sa.data, (length(sa),), sa.lengths, sa.capacities, sa.context)
+    sv = SecureArray(sa.data, (length(sa),), capacity(sa), sa.context)
     # apply main shift
     sv_new = circshift(sv * main_mask, main_shift)
     # correct positions of elements in each dimension combination
@@ -852,5 +848,5 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer})
         sv_new += circshift(sv * masks[i], shift_masked[i])
     end
 
-    SecureArray(sv_new.data, size(sa), sa.lengths, sa.capacities, sa.context)
+    SecureArray(sv_new.data, size(sa), capacity(sa), sa.context)
 end
