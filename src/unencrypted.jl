@@ -246,17 +246,6 @@ function multiply(sa::SecureArray{<:Unencrypted}, scalar::Real)
     SecureArray(sa.data .* scalar, size(sa), capacity(sa), sa.context)
 end
 
-function rotate(sa::SecureArray{<:Unencrypted, 1}, shift; wrap_by)
-    # `wrap_by` can be ignored since here length is always equal to capacity
-    rotate(sa, shift[1])
-end
-
-# The function is required to avoid infinite recursion in the first rotate method with
-# the `wrap_by` keyword argument.
-function rotate(sa::SecureArray{<:Unencrypted, 1}, shift::Integer)
-    SecureArray(circshift(sa.data, shift), size(sa), capacity(sa), sa.context)
-end
-
 function rotate(sa::SecureArray{<:Unencrypted, N}, shift) where N
     SecureArray(circshift(sa.data, shift), size(sa), capacity(sa), sa.context)
 end

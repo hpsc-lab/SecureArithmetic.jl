@@ -583,16 +583,8 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array
 end
 
-function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Union{Integer, Tuple{Integer}}; wrap_by)
-    # wrap by capacity makes sense only for single ciphertext
-    if wrap_by == :capacity && length(sa.data) == 1
-        cc = get_crypto_context(sa)
-        # We use `-shift` to match Julia's usual `circshift` direction
-        ciphertext_rotated = OpenFHE.EvalRotate(cc, sa.data[1], -shift[1])
-        return SecureArray([ciphertext_rotated], size(sa), capacity(sa), sa.context)
-    else
-        return rotate(sa, shift[1])
-    end
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Tuple{Integer})
+    return rotate(sa, shift[1])
 end
 
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
