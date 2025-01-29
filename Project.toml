@@ -8,6 +8,5 @@ OpenFHE = "77ce9b8e-ecf5-45d1-bd8a-d31f384f2f95"
 openfhe_julia_jll = "e5e97983-1b8c-50fe-92b7-0e05c8c202e2"
 
 [compat]
-OpenFHE = "0.1.11"
-openfhe_julia_jll = "0.3.8"
+OpenFHE = "0.1.12"
 julia = "1.8"
