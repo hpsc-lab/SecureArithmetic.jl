@@ -43,19 +43,17 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
 
 """
-    init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
-              
+    init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                          shifts, shape)
 
-An empty duplicate of [`init_bootstrapping!`](@ref) for unencrypted data.
+An empty duplicate of [`init_matrix_rotation!`](@ref) for unencrypted data.
 
 See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
-[`init_bootstrapping!`](@ref)
+[`init_matrix_rotation!`](@ref)
 """
-init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
+init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                      shifts, shape) = nothing
 
-############################################################################################
-# Array
-############################################################################################
 """
     init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
                          shifts, shape)
@@ -67,6 +65,17 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 """
 init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
                      shifts, shape) = nothing
+
+"""
+    init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
+              
+
+An empty duplicate of [`init_bootstrapping!`](@ref) for unencrypted data.
+
+See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
+[`init_bootstrapping!`](@ref)
+"""
+init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 
 """
     PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})

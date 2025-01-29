@@ -43,6 +43,12 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn init_rotation!(context, private_key, [1, -2])
         end
 
+        @testset verbose=true showtiming=true "init_matrix_rotation!" begin
+            @test_nowarn init_matrix_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
+                                                                      (0, 1), (1, 0)], (4, 2))
+            @test_nowarn init_matrix_rotation!(context, private_key, (2, 0), (4, 2))
+        end
+        
         @testset verbose=true showtiming=true "init_array_rotation!" begin
             @test_nowarn init_array_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
                                                                      (0, 1), (1, 0)], (4, 2))

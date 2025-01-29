@@ -97,28 +97,24 @@ function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::P
 end
 
 """
-    init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
-                        private_key::PrivateKey)
+    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                          shifts::Union{Vector{<:NTuple{2, <:Integer}}, NTuple{2, Integer}},
+                          shape::NTuple{2, Integer})
 
-Generate the necessary keys from `private_key` to enable bootstrapping for a given
-`context`. Supported for CKKS only.
+Generate all required rotation keys for use with `circshift` for the
+rotation index in `shift` using the `private_key`. The keys are stored in the given `context`.
+
+Note: `init_array_rotation!` can be used instead.
 
 See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
-[`bootstrap!`](@ref)
+[`init_array_rotation!`](@ref)
 """
-function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
-                             private_key::PrivateKey)
-    cc = get_crypto_context(context)
-    encoding_parameters = OpenFHE.GetEncodingParams(cc)
-    slots = OpenFHE.GetBatchSize(encoding_parameters)
-    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, slots)
-
-    nothing
+function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
+                               shifts::Union{Vector{<:NTuple{2, <:Integer}}, NTuple{2, Integer}},
+                               shape::NTuple{2, Integer})
+    init_array_rotation!(context, private_key, shifts, shape)
 end
 
-############################################################################################
-# Array
-############################################################################################
 """
     init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
                          shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer})
@@ -255,6 +251,26 @@ function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vect
     end
 
     get_shifts_array(context, shifts_1d, (prod(shape),))
+end
+
+"""
+    init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
+                        private_key::PrivateKey)
+
+Generate the necessary keys from `private_key` to enable bootstrapping for a given
+`context`. Supported for CKKS only.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
+[`bootstrap!`](@ref)
+"""
+function init_bootstrapping!(context::SecureContext{<:OpenFHEBackend},
+                             private_key::PrivateKey)
+    cc = get_crypto_context(context)
+    encoding_parameters = OpenFHE.GetEncodingParams(cc)
+    slots = OpenFHE.GetBatchSize(encoding_parameters)
+    OpenFHE.EvalBootstrapKeyGen(cc, private_key.private_key, slots)
+
+    nothing
 end
 
 """
