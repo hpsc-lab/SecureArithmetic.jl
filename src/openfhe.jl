@@ -438,7 +438,7 @@ function bootstrap!(secure_array::SecureArray{<:OpenFHEBackend}, num_iterations 
                     precision = 0)
     context = secure_array.context
     cc = get_crypto_context(context)
-    Threads.@threads for i in range(1, length(secure_array.data))
+    for i in range(1, length(secure_array.data))
         secure_array.data[i] = OpenFHE.EvalBootstrap(cc, secure_array.data[i],
                                                      num_iterations, precision)
     end
@@ -454,7 +454,7 @@ end
 function add(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa1)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
-    Threads.@threads for i in range(1, length(sa1.data))
+    for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa1.data[i], sa2.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
@@ -465,7 +465,7 @@ end
 function add(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], pa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -476,7 +476,7 @@ end
 function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalAdd(cc, sa.data[i], scalar)
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -487,7 +487,7 @@ end
 function subtract(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa1)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
-    Threads.@threads for i in range(1, length(sa1.data))
+    for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa1.data[i], sa2.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
@@ -498,7 +498,7 @@ end
 function subtract(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], pa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -509,7 +509,7 @@ end
 function subtract(pa::PlainArray{<:OpenFHEBackend}, sa::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, pa.data[i], sa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -520,7 +520,7 @@ end
 function subtract(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, sa.data[i], scalar)
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -531,7 +531,7 @@ end
 function subtract(scalar::Real, sa::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalSub(cc, scalar, sa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -542,7 +542,7 @@ end
 function negate(sa::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalNegate(cc, sa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -553,7 +553,7 @@ end
 function multiply(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa1)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa1.data))
-    Threads.@threads for i in range(1, length(sa1.data))
+    for i in range(1, length(sa1.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa1.data[i], sa2.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa1), capacity(sa1), sa1.context)
@@ -564,7 +564,7 @@ end
 function multiply(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], pa.data[i])
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -575,7 +575,7 @@ end
 function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
-    Threads.@threads for i in range(1, length(sa.data))
+    for i in range(1, length(sa.data))
         ciphertexts[i] = OpenFHE.EvalMult(cc, sa.data[i], scalar)
     end
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
@@ -613,7 +613,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # if the last vector is also full, rotation is simpler
     if empty_places == 0
         # shift each vector
-        Threads.@threads for i in range(1, length(sv))
+        for i in range(1, length(sv))
             sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
         end
         # first shift2 elements of each vector have to be moved 
@@ -628,7 +628,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
             mask2 = zeros(vec_capacity)
             mask2[shift2+1:end] .= 1
             mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
-            Threads.@threads for i in range(1, length(sv))
+            for i in range(1, length(sv))
                 sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
                                             OpenFHE.EvalMult(cc, sv[i], mask2))
             end
@@ -641,7 +641,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         # (except for the short vector), change the shift back
         shift2 -= empty_places
         # rotate all vectors except the last one
-        Threads.@threads for i in range(1, length(sv)-1)
+        for i in range(1, length(sv)-1)
             sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
         end
         # rotate the last considering empty places
@@ -657,7 +657,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         mask2 = zeros(vec_capacity)
         mask2[shift2+1:end] .= 1
         mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
-        Threads.@threads for i in range(1, length(sv)-1)
+        for i in range(1, length(sv)-1)
             sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
                                         OpenFHE.EvalMult(cc, sv[i], mask2))
         end
@@ -670,12 +670,12 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     # so that the last vector still the only short one
     else
         # first shift1 vectors have to be rotated by shift2
-        Threads.@threads for i in range(1, shift1)
+        for i in range(1, shift1)
             sv[i] = OpenFHE.EvalRotate(cc, sv[i], -shift2)
         end
         # all other vectors except last one have to be rotated by shift2 + short_length to compensate
         # empty places in array's middle
-        Threads.@threads for i in range(shift1+1, length(sv)-1)
+        for i in range(shift1+1, length(sv)-1)
             sv[i] = OpenFHE.EvalRotate(cc, sv[i], -(shift2 + short_length))
         end
         # the last one is also shifted by shift2
@@ -690,7 +690,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
         mask2 = zeros(vec_capacity)
         mask2[shift2+1:end] .= 1
         mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
-        Threads.@threads for i in range(1, shift1-1)
+        for i in range(1, shift1-1)
             sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
                                         OpenFHE.EvalMult(cc, sv[i], mask2))
         end
@@ -721,7 +721,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
             mask4[n_shift+1:end] .= 1
             mask4 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask4)
             # move n_shift elements starting from short vector upto last one
-            Threads.@threads for i in range(shift1+1, length(sv)-1)
+            for i in range(shift1+1, length(sv)-1)
                 sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i-1], mask3),
                                             OpenFHE.EvalMult(cc, sv[i], mask4))
             end
@@ -754,7 +754,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
                                              OpenFHE.EvalMult(cc, circshift(sv, -1)[shift1], mask4))
             # All vectors after the short one upto prelast vector
             # become last n_shift elements from the next vector
-            Threads.@threads for i in range(shift1+1, length(sv)-2)
+            for i in range(shift1+1, length(sv)-2)
                 sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i+1], mask4),
                                             OpenFHE.EvalMult(cc, sv[i], mask5))
             end
