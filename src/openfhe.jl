@@ -70,187 +70,122 @@ end
 
 """
     init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                   shifts)
+                   shape::NTuple{N, Integer}, rotation_index...)
 
-Generate rotation keys for use with `OpenFHE.EvalRotate` using the `private_key` and for the
-rotation indexes in `shifts`. The keys are stored in the given `context`.
-Positive shift defines rotation to the right, e.g. a rotation with a shift 1:
-[1, 2, 3, 4] -> [4, 1, 2, 3].
-Negative shift defines rotation to the left, e.g. a rotation with a shift -1:
-[1, 2, 3, 4] -> [2, 3, 4, 1].
+Generate all required rotation keys for use with `circshift` for the
+rotation indexes in `rotation_index` using the `private_key`. The keys are stored in the given `context`.
 
-Note: Here, indexes stored in `shifts` have reversed sign compared to rotation indexes used in
-OpenFHE.
-
-Note: To ensure that all indexes for intrinsic operations are precomputed, use
-`init_array_rotation!`.
-
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
-[`init_array_rotation!`](@ref)
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref)
 """
 function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                        shifts)
+                        shape::NTuple{N, Integer}, rotation_index...) where N
     cc = get_crypto_context(context)
-    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -shifts)
-
-    nothing
-end
-
-"""
-    init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                          shifts::Union{Vector{<:NTuple{2, <:Integer}}, NTuple{2, Integer}},
-                          shape::NTuple{2, Integer})
-
-Generate all required rotation keys for use with `circshift` for the
-rotation index in `shift` using the `private_key`. The keys are stored in the given `context`.
-
-Note: `init_array_rotation!` can be used instead.
-
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
-[`init_array_rotation!`](@ref)
-"""
-function init_matrix_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                               shifts::Union{Vector{<:NTuple{2, <:Integer}}, NTuple{2, Integer}},
-                               shape::NTuple{2, Integer})
-    init_array_rotation!(context, private_key, shifts, shape)
-end
-
-"""
-    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                         shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer})
-
-Generate all required rotation keys for use with `circshift` for the
-rotation index in `shift` using the `private_key`. The keys are stored in the given `context`.
-
-Note: To precompute rotation keys for an exactly specified rotation index, use `init_rotation!`.
-
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
-[`init_rotation!`](@ref)
-"""
-function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                              shift::Union{Integer, NTuple{N, Integer}}, shape::NTuple{N, Integer}) where N
-    init_array_rotation!(context, private_key, [shift], shape)
-end
-
-"""
-    init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                         shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
-                         shape::NTuple{N, Integer})
-
-Generate all required rotation keys for use with `circshift` for the
-rotation indexes in `shifts` using the `private_key`. The keys are stored in the given `context`.
-
-Note: To precompute rotation keys for exactly specified rotation indexes, use `init_rotation!`.
-
-See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref), [`PrivateKey`](@ref),
-[`init_rotation!`](@ref)
-"""
-function init_array_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::PrivateKey,
-                              shifts::Vector{<:Union{<:Integer, <:NTuple{N, <:Integer}}},
-                              shape::NTuple{N, Integer}) where N
-    cc = get_crypto_context(context)
-    # Get shifts for precompilation
-    shifts_ = get_shifts_array(context, shifts, shape)
-    # All shifts stored in shifts_ correspond to Base.circshift, but to use with OpenFHE, all shifts
+    # Get indexes for precompilation
+    indexes = get_index(context, shape, rotation_index)
+    # All indexes correspond to Base.circshift, but to use with OpenFHE, all indexes
     # have to be negated.
-    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -unique(shifts_))
+    OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -unique(indexes))
 
     nothing
 end
 
-function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Tuple{<:Integer}},
-                          shape::Tuple{Integer})
-    get_shifts_array(context, getproperty.(shifts,1), shape)
-end
-
-function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:Integer},
-                          shape::Tuple{Integer})
+function get_index(context::SecureContext{<:OpenFHEBackend}, shape::Tuple{Integer},
+                   rotation_index)
     # extract capacity
     cc = get_crypto_context(context)
     capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
     # length of an array
     array_length = prod(shape)
-    # length of short array
+    # length of short vector
     short_length = array_length % capacity
-    # empty places in short array
+    # empty places in short vector
     empty_places = capacity - short_length
     # number of ciphertexts in array
     n_ciphertexts = Int(ceil(array_length/capacity))
-    # minimal required shift
-    shifts = shifts .% array_length
-    # store all openfhe shifts to enable
-    shifts_ = Int[]
-    # iterate over all shifts
-    for i in range(1, length(shifts))
-        # convert negative shift to positive one
-        if shifts[i] < 0
-            shifts[i] = array_length + shifts[i]
+    # store all indexes to enable
+    indexes = Int[]
+    # iterate over all indexes
+    for index in rotation_index
+        if length(index) > 1
+            throw(ArgumentError("Got rotation index with length $(length(index)), expected 1"))
         end
-        # add all shifts from implementation of rotate function
-        shifts[i] += empty_places
-        shift1 = div(shifts[i], capacity)
-        shift2 = shifts[i] - capacity * shift1
-        push!(shifts_, shift2)
+        # index can be tuple or vector
+        index = index[1]
+        # minimal required rotation
+        index = index % array_length
+        # convert negative index to positive one
+        if index < 0
+            index = array_length + index
+        end
+        # add all indexes from implementation of rotate function
+        index += empty_places
+        index1 = div(index, capacity)
+        index2 = index - capacity * index1
+        push!(indexes, index2)
         if empty_places != 0
-            push!(shifts_, short_length)
-            if shift1 % n_ciphertexts == 0
-                push!(shifts_, shift2 - empty_places)
+            push!(indexes, short_length)
+            if index1 % n_ciphertexts == 0
+                push!(indexes, index2 - empty_places)
             else
-                push!(shifts_, shift2 + short_length)
+                push!(indexes, index2 + short_length)
             end
         end
     end
 
-    shifts_
+    indexes
 end
 
-function get_shifts_array(context::SecureContext{<:OpenFHEBackend}, shifts::Vector{<:NTuple{N, <:Integer}},
-    shape::NTuple{N, Integer}) where N
-
+function get_index(context::SecureContext{<:OpenFHEBackend}, shape::NTuple{N, Integer},
+                   rotation_index) where N
     # calculate length of each dimension
     lengths = ones(Int, N)
     for i in range(2, N)
         lengths[i] = prod(shape[1:i-1])
     end
-    # assemble 1d shifts
-    shifts_1d = Int[]
-    for shift in shifts
-        # use mutable type
-        shift = collect(shift)
-        # minimal required shift
-        shift = shift .% shape
-        # convert negative shift to positive
+    # assemble 1d indexes
+    indexes_1d = Int[]
+    for index in rotation_index
+        if length(index) > N
+            throw(ArgumentError("Got rotation index with length $(length(index)), expected $N"))
+        else
+            # if index is shorter than shape, fill it up with zeros
+            index = vcat(collect(index), zeros(Integer, N - length(index)))
+        end
+        # minimal required rotation
+        index = index .% shape
+        # convert negative index to positive
         for i in range(1, N)
-            if shift[i] < 0
-                shift[i] = shape[i] + shift[i]
+            if index[i] < 0
+                index[i] = shape[i] + index[i]
             end
         end
-        # shift for each dimension
-        shift1 = zeros(Int, N)
+        # index for each dimension
+        index1 = zeros(Int, N)
         for i in range(1, N)
-            shift1[i] = shift[i] * lengths[i]
+            index1[i] = index[i] * lengths[i]
         end
-        # shift for main part of array
-        main_shift = sum(shift1)
-        push!(shifts_1d, sum(shift1))
-        # all possible combinations of dimensions (with non-zero shift)
+        # index for main part of array
+        main_index = sum(index1)
+        push!(indexes_1d, main_index)
+        # all possible combinations of dimensions (with non-zero index)
         combinations = Vector{Int}[]
         for i in range(1, N-1)
-            if shift[i] != 0
+            if index[i] != 0
                 append!(combinations, push!.(copy.(combinations), i))
                 push!(combinations, [i])
             end
         end
-        # shifts to retrieve cyclicity
+        # inexes to retrieve cyclicity
         for i in combinations
-            push!(shifts_1d, main_shift)
+            push!(indexes_1d, main_index)
             for j in i
-                shifts_1d[end] -= lengths[j+1]
+                indexes_1d[end] -= lengths[j+1]
             end
         end
     end
 
-    get_shifts_array(context, shifts_1d, (prod(shape),))
+    # compute 1d indexes
+    get_index(context, (prod(shape),), indexes_1d)
 end
 
 """

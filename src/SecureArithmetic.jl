@@ -13,8 +13,7 @@ export PrivateKey, PublicKey
 export Unencrypted, OpenFHEBackend
 
 # Crypto operations
-export generate_keys, init_multiplication!, init_rotation!, init_matrix_rotation!,
-       init_array_rotation!, init_bootstrapping!
+export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects

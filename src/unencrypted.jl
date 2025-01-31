@@ -33,38 +33,16 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey) = nothing
 
 """
-    init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts)
+    init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+                   shape, rotation_index...)
 
 An empty duplicate of [`init_rotation!`](@ref) for unencrypted data.
 
 See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 [`init_rotation!`](@ref)
 """
-init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey, shifts) = nothing
-
-"""
-    init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                          shifts, shape)
-
-An empty duplicate of [`init_matrix_rotation!`](@ref) for unencrypted data.
-
-See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
-[`init_matrix_rotation!`](@ref)
-"""
-init_matrix_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                      shifts, shape) = nothing
-
-"""
-    init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                         shifts, shape)
-
-An empty duplicate of [`init_array_rotation!`](@ref) for unencrypted data.
-
-See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
-[`init_array_rotation!`](@ref)
-"""
-init_array_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                     shifts, shape) = nothing
+init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
+               shape, rotation_index...) = nothing
 
 """
     init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)

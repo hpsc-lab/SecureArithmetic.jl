@@ -40,24 +40,17 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         end
 
         @testset verbose=true showtiming=true "init_rotation!" begin
-            @test_nowarn init_rotation!(context, private_key, [1, -2])
-        end
-
-        @testset verbose=true showtiming=true "init_matrix_rotation!" begin
-            @test_nowarn init_matrix_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
-                                                                      (0, 1), (1, 0)], (4, 2))
-            @test_nowarn init_matrix_rotation!(context, private_key, (2, 0), (4, 2))
-        end
-        
-        @testset verbose=true showtiming=true "init_array_rotation!" begin
-            @test_nowarn init_array_rotation!(context, private_key, [(1, -1), (-1, 0), (1, 1),
-                                                                     (0, 1), (1, 0)], (4, 2))
-            @test_nowarn init_array_rotation!(context, private_key, [1, -14, 10, 7], (30,))
-            @test_nowarn init_array_rotation!(context, private_key, 2, (32,))
-            @test_nowarn init_array_rotation!(context, private_key, (3,), (32,))
-            @test_nowarn init_array_rotation!(context, private_key, [(0, 3, 1, -3), (-1, -2, -1, 2)],
-                                              (4, 3, 4, 5))
-            @test_nowarn init_array_rotation!(context, private_key, [1, -2], (3,))
+            @test_nowarn init_rotation!(context, private_key, (4, 2),
+                                        (1, -1), (-1, 0), (1, 1), (0, 1), (1, 0))
+            @test_nowarn init_rotation!(context, private_key, (4, 2), 2)
+            @test_nowarn init_rotation!(context, private_key, (30,), 1, (-14,), 10, 7)
+            @test_nowarn init_rotation!(context, private_key, (32,), 2, [3])
+            @test_nowarn init_rotation!(context, private_key, (4, 3, 4, 5), [0, 3, 1, -3], [-1, -2, -1, 2])
+            @test_nowarn init_rotation!(context, private_key, (3,), 1, -2)
+            if name == "OpenFHE"
+                @test_throws ArgumentError init_rotation!(context, private_key, (3,), (1, 2))
+                @test_throws ArgumentError init_rotation!(context, private_key, (3, 4), (1, 2, 3))
+            end
         end
 
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]

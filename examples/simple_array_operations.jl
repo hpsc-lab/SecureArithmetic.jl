@@ -6,7 +6,7 @@ function simple_array_operations(context)
 
     init_multiplication!(context, private_key)
     init_bootstrapping!(context, private_key)
-    init_array_rotation!(context, private_key, [(1, -1, 1), (0, 1, 0)], (3, 3, 3))
+    init_rotation!(context, private_key, (3, 3, 3), (1, -1, 1), (0, 1, 0))
  
     a1 = reshape(Vector(range(1, 27)), (3, 3, 3))
     a2 = reshape(Vector(range(27, 1, step=-1)), (3, 3, 3))
