@@ -518,11 +518,8 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array
 end
 
-function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Tuple{Integer})
-    return rotate(sa, shift[1])
-end
-
-function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
+function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
+    shift = shift[1]
     # crypto context
     cc = get_crypto_context(sa.context)
     # minimal required shift
@@ -706,7 +703,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift::Integer)
     SecureArray(sv, size(sa), capacity(sa), sa.context)
 end
 
-function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift::NTuple{N, Integer}) where N
+function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
     # use mutable type
     shift = collect(shift)
     # minimal required shift

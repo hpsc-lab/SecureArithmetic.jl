@@ -41,7 +41,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
 
         @testset verbose=true showtiming=true "init_rotation!" begin
             @test_nowarn init_rotation!(context, private_key, (4, 2),
-                                        (1, -1), (-1, 0), (1, 1), (0, 1), (1, 0))
+                                        (1, -1), -1, (1, 1), (0, 1), (1, 0))
             @test_nowarn init_rotation!(context, private_key, (4, 2), 2)
             @test_nowarn init_rotation!(context, private_key, (30,), 1, (-14,), 10, 7)
             @test_nowarn init_rotation!(context, private_key, (32,), 2, [3])
@@ -177,19 +177,21 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         @testset verbose=true showtiming=true "circshift" begin
             @test circshift(sv_short, 1) isa SecureVector
             @test circshift(sv_short, 0) isa SecureVector
+            @test_throws ArgumentError circshift(sv_short, (1, 2))
             @test collect(decrypt(circshift(sv_short, 1), private_key)) ≈
                 [3.0, 1.0, 2.0]
-            @test collect(decrypt(circshift(sv_short, -2), private_key)) ≈
+            @test collect(decrypt(circshift(sv_short, [-2]), private_key)) ≈
                 [3.0, 1.0, 2.0]
-            @test collect(decrypt(circshift(sv1, 1), private_key)) ≈
+            @test collect(decrypt(circshift(sv1, (1,)), private_key)) ≈
                 [5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0]
             @test collect(decrypt(circshift(sv1, -2), private_key)) ≈
                 [0.75, 1.0, 2.0, 3.0, 4.0, 5.0, 0.25, 0.5]
             @test collect(decrypt(circshift(sm1, (1, -1)), private_key)) ≈ circshift(m1, (1, -1))
             @test collect(decrypt(circshift(sm1, (1, 1)), private_key)) ≈ circshift(m1, (1, 1))
-            @test collect(decrypt(circshift(sm1, (-1, 0)), private_key)) ≈ circshift(m1, (-1, 0))
-            @test collect(decrypt(circshift(sm1, (0, 1)), private_key)) ≈ circshift(m1, (0, 1))
+            @test collect(decrypt(circshift(sm1, -1), private_key)) ≈ circshift(m1, -1)
+            @test collect(decrypt(circshift(sm1, [0, 1]), private_key)) ≈ circshift(m1, [0, 1])
             @test collect(decrypt(circshift(sm1, (1, 0)), private_key)) ≈ circshift(m1, (1, 0))
+            @test collect(decrypt(circshift(sm1, 2), private_key)) ≈ circshift(m1, 2)
             @test collect(decrypt(circshift(sm1, (0, 0)), private_key)) ≈ m1
             @test collect(decrypt(circshift(sa1, 1), private_key)) ≈ circshift(a1, 1)
             @test collect(decrypt(circshift(sa1, 10), private_key)) ≈ circshift(a1, 10)
@@ -199,7 +201,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa1, 0), private_key)) ≈ circshift(a1, 0)
             @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
             @test collect(decrypt(circshift(sa4, (0, 3, 1, -3)), private_key)) ≈ circshift(a4, (0, 3, 1, -3))
-            @test collect(decrypt(circshift(sa4, (-1, -2, -1, 2)), private_key)) ≈ circshift(a4, (-1, -2, -1, 2))
+            @test collect(decrypt(circshift(sa4, [-1, -2, -1, 2]), private_key)) ≈ circshift(a4, [-1, -2, -1, 2])
         end
 
         @testset verbose=true showtiming=true "length" begin

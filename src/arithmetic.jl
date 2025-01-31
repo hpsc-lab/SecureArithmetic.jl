@@ -23,38 +23,28 @@ Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
 
 # Circular shift
 """
-    circshift(sa::SecureArray{<:AbstractCryptoBackend, N}, shift::NTuple{N, Integer})
+    circshift(sa::SecureArray, shifts)
 
-Circularly shift, i.e., rotate the data in `sa` by `shift` positions, similarly to Julia's
+Circularly shift, i.e., rotate the data in `sa` by `shifts` positions, similarly to Julia's
 `circshift` for regular arrays.
 
 Note: If `N` is greater than one, this operation increases the multiplicative level by two,
 otherwise by one.
 
-Note: To precompute all required rotation indexes, use `init_array_rotation!`.
+Note: To precompute all required rotation indexes, use `init_rotation!`.
 
-See also: [`SecureArray`](@ref), [`init_array_rotation!`](@ref)
+See also: [`SecureArray`](@ref), [`init_rotation!`](@ref)
 """
-function Base.circshift(sa::SecureArray{<:AbstractCryptoBackend, N}, shift::NTuple{N, Integer}) where N
-    if all(shift .% size(sa) .== 0)
+function Base.circshift(sa::SecureArray, shifts)
+    if length(shifts) > ndims(sa)
+        throw(ArgumentError("Got rotation index with length $(length(shifts)), expected $(ndims(sa))"))
+    elseif length(shifts) < ndims(sa)
+        shifts = vcat(collect(shifts), zeros(Integer, ndims(sa) - length(shifts)))
+    end
+
+    if all(shifts .% size(sa) .== 0)
         return sa
     end
 
-    rotate(sa, shift)
-end
-
-"""
-    circshift(sv::SecureVector, shift::Integer)
-
-Circularly shift, i.e., rotate the data in `sv` by `shift` positions, similarly to Julia's
-`circshift` for regular arrays.
-
-Note: This operation increases the multiplicative level by one.
-
-Note: To precompute all required rotation indexes, use `init_array_rotation!`.
-
-See also: [`SecureVector`](@ref), [`init_array_rotation!`](@ref)
-"""
-function Base.circshift(sv::SecureVector, shift::Integer)
-    rotate(sv, (shift,))
+    rotate(sa, shifts)
 end
