@@ -20,7 +20,7 @@ an unencrypted backend for fast verification of a computation pipeline.
 If you have not yet installed Julia, please [follow the instructions for your
 operating system](https://julialang.org/downloads/platform/).
 [SecureArithmetic.jl](https://github.com/hpsc-lab/SecureArithmetic.jl) works with Julia v1.10
-and later on Linux and macOS platforms, and with Julia v1.9 or later on Windows platforms.
+and later on Linux, macOS and Windows platforms.
 
 ### Installation
 Since SecureArithmetic.jl  is a registered Julia package, you can install it by executing
