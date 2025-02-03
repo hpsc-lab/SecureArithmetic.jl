@@ -43,7 +43,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test_nowarn init_rotation!(context, private_key, (4, 2),
                                         (1, -1), -1, (1, 1), (0, 1), (1, 0))
             @test_nowarn init_rotation!(context, private_key, (4, 2), 2)
-            @test_nowarn init_rotation!(context, private_key, (30,), 1, (-14,), 10, 7)
+            @test_nowarn init_rotation!(context, private_key, 30, 1, (-14,), 10, 7)
             @test_nowarn init_rotation!(context, private_key, (32,), 2, [3])
             @test_nowarn init_rotation!(context, private_key, (4, 3, 4, 5), [0, 3, 1, -3], [-1, -2, -1, 2])
             @test_nowarn init_rotation!(context, private_key, (3,), 1, -2)
@@ -84,9 +84,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         pm2 = PlainMatrix(m2, context)
 
         @testset verbose=true showtiming=true "PlainArray" begin
-            @test PlainArray(a1, context) isa PlainArray
-            @test PlainArray(vec(a1), context, (length(a1),)) isa PlainArray
-            @test PlainArray(Vector(range(1, 30)), context, (30,)) isa PlainArray
+            @test PlainArray(a4, context) isa PlainArray
         end
 
         pa1 = PlainArray(a1, context)

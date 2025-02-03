@@ -34,7 +34,7 @@ init_multiplication!(context::SecureContext{<:Unencrypted}, private_key::Private
 
 """
     init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-                   shape, rotation_index...)
+                   shape, shifts...)
 
 An empty duplicate of [`init_rotation!`](@ref) for unencrypted data.
 
@@ -42,7 +42,7 @@ See also: [`SecureContext`](@ref), [`Unencrypted`](@ref), [`PrivateKey`](@ref),
 [`init_rotation!`](@ref)
 """
 init_rotation!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey,
-               shape, rotation_index...) = nothing
+               shape, shifts...) = nothing
 
 """
     init_bootstrapping!(context::SecureContext{<:Unencrypted}, private_key::PrivateKey)
@@ -95,12 +95,6 @@ See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decr
 """
 function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
     PlainArray(data, size(data), length(data), context)
-end
-
-function PlainArray(data::Vector{<:Real}, context::SecureContext{<:Unencrypted},
-                    shape::Tuple)
-    reshaped_data = Array(reshape(data, shape))
-    PlainArray(reshaped_data, context)
 end
 
 function Base.show(io::IO, pa::PlainArray{<:Unencrypted})
