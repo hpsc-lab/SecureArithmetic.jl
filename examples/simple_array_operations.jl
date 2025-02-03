@@ -1,72 +1,67 @@
 using SecureArithmetic
 using OpenFHE
 
-function simple_matrix_operations(context)
+function simple_array_operations(context)
     public_key, private_key = generate_keys(context)
 
     init_multiplication!(context, private_key)
     init_bootstrapping!(context, private_key)
-    init_rotation!(context, private_key, (3, 3), (1, -1), (0, 1))
+    init_rotation!(context, private_key, (3, 3, 3), (1, -1, 1), (0, 1, 0))
  
-    m1 = [0.25 0.5 0.75;
-         1.0 2.0 3.0;
-         4.0 5.0 6.0]
-        
-    m2 = [6.0 5.0 4.0;
-          3.0 2.0 1.0;
-          0.75 0.5 0.25]
+    a1 = reshape(Vector(range(1, 27)), (3, 3, 3))
+    a2 = reshape(Vector(range(27, 1, step=-1)), (3, 3, 3))
 
-    pm1 = PlainMatrix(m1, context)
-    pm2 = PlainMatrix(m2, context)
+    pa1 = PlainArray(a1, context)
+    pa2 = PlainArray(a2, context)
 
-    println("Input matrix m1: ", pm1)
-    println("Input matrix m2: ", pm2)
+    println("Input array a1: ", pa1)
+    println("Input array a2: ", pa2)
 
-    sm1 = encrypt(pm1, public_key)
-    sm2 = encrypt(pm2, public_key)
+    sa1 = encrypt(pa1, public_key)
+    sa2 = encrypt(pa2, public_key)
 
-    sm_add = sm1 + sm2
+    sa_add = sa1 + sa2
 
-    sm_sub = sm1 - sm2
+    sa_sub = sa1 - sa2
 
-    sm_scalar = sm1 * 4.0
+    sa_scalar = sa1 * 4.0
 
-    sm_mult = sm1 * sm2
+    sa_mult = sa1 * sa2
 
-    sm_shift1 = circshift(sm1, (0, 1))
-    sm_shift2 = circshift(sm1, (1, -1))
+    sa_shift1 = circshift(sa1, (0, 1, 0))
+    sa_shift2 = circshift(sa1, (1, -1, 1))
 
-    # Perform the bootstrapping operation over a matrix. The goal is to increase the number of
+    # Perform the bootstrapping operation over an array. The goal is to increase the number of
     # levels remaining for HE computation.
-    sm_after_bootstrap = bootstrap!(sm1)
+    sa_after_bootstrap = bootstrap!(sa1)
 
 
     println()
     println("Results of homomorphic computations: ")
 
-    result_sm1 = decrypt(sm1, private_key)
-    println("m1 = ", result_sm1)
+    result_sa1 = decrypt(sa1, private_key)
+    println("a1 = ", result_sa1)
 
-    result_sm_add = decrypt(sm_add, private_key)
-    println("m1 + m2 = ", result_sm_add)
+    result_sa_add = decrypt(sa_add, private_key)
+    println("a1 + a2 = ", result_sa_add)
 
-    result_sm_sub = decrypt(sm_sub, private_key)
-    println("m1 - m2 = ", result_sm_sub)
+    result_sa_sub = decrypt(sa_sub, private_key)
+    println("a1 - a2 = ", result_sa_sub)
 
-    result_sm_scalar = decrypt(sm_scalar, private_key)
-    println("4 * m1 = ", result_sm_scalar)
+    result_sa_scalar = decrypt(sa_scalar, private_key)
+    println("4 * a1 = ", result_sa_scalar)
 
-    result_sm_mult = decrypt(sm_mult, private_key)
-    println("m1 * m2 = ", result_sm_mult)
+    result_sa_mult = decrypt(sa_mult, private_key)
+    println("a1 * a2 = ", result_sa_mult)
 
-    result_sm_shift1 = decrypt(sm_shift1, private_key)
-    println("m1 shifted circularly by (0, 1) = ", result_sm_shift1)
+    result_sa_shift1 = decrypt(sa_shift1, private_key)
+    println("a1 shifted circularly by (0, 1, 0) = ", result_sa_shift1)
 
-    result_sm_shift2 = decrypt(sm_shift2, private_key)
-    println("m1 shifted circularly by (1, -1) = ", result_sm_shift2)
+    result_sa_shift2 = decrypt(sa_shift2, private_key)
+    println("a1 shifted circularly by (1, -1, 1) = ", result_sa_shift2)
 
-    result_after_bootstrap = decrypt(sm_after_bootstrap, private_key)
-    println("m1 after bootstrapping \n\t", result_after_bootstrap)
+    result_after_bootstrap = decrypt(sa_after_bootstrap, private_key)
+    println("a1 after bootstrapping \n\t", result_after_bootstrap)
     
     # Clean all `OpenFHE.CryptoContext`s and generated keys.
     release_context_memory()
@@ -84,7 +79,7 @@ secret_key_distribution = UNIFORM_TERNARY
 SetSecretKeyDist(parameters, secret_key_distribution)
 
 SetSecurityLevel(parameters, HEStd_NotSet)
-SetRingDim(parameters, 1 << 12)
+SetRingDim(parameters, 1 << 5)
 
 rescale_technique = FLEXIBLEAUTO
 dcrt_bits = 59
@@ -129,11 +124,11 @@ context_unencrypted = SecureContext(Unencrypted())
 
 ################################################################################
 println("="^80)
-println("simple_matrix_operations with an OpenFHE context")
-simple_matrix_operations(context_openfhe)
+println("simple_array_operations with an OpenFHE context")
+simple_array_operations(context_openfhe)
 
 
 ################################################################################
 println("="^80)
-println("simple_matrix_operations with an Unencrypted context")
-simple_matrix_operations(context_unencrypted)
+println("simple_array_operations with an Unencrypted context")
+simple_array_operations(context_unencrypted)

@@ -3,7 +3,8 @@ module SecureArithmetic
 using OpenFHE: OpenFHE
 
 # Basic types
-export SecureContext, SecureVector, PlainVector, PlainMatrix, SecureMatrix
+export SecureContext, SecureVector, PlainVector, PlainMatrix, SecureMatrix,
+       PlainArray, SecureArray
 
 # Keys
 export PrivateKey, PublicKey
@@ -12,8 +13,7 @@ export PrivateKey, PublicKey
 export Unencrypted, OpenFHEBackend
 
 # Crypto operations
-export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!,
-       init_matrix_rotation!
+export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects

@@ -7,5 +7,5 @@ version = "0.1.6-dev"
 OpenFHE = "77ce9b8e-ecf5-45d1-bd8a-d31f384f2f95"
 
 [compat]
-OpenFHE = "0.1.11"
-julia = "1.8"
+OpenFHE = "0.1.12"
+julia = "1.10"
