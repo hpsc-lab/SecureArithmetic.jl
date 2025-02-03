@@ -81,7 +81,7 @@ function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::P
                         shape::Union{Integer, NTuple{N, Integer}}, shifts...) where N
     cc = get_crypto_context(context)
     # Get rotation indices for precompilation
-    rotation_indices = compute_rotation_indices(context, shape, shifts)
+    rotation_indices = compute_rotation_indices_nd(context, shape, shifts)
     # All rotation indices correspond to Base.circshift, but to use with OpenFHE,
     # all rotation indices have to be negated.
     OpenFHE.EvalRotateKeyGen(cc, private_key.private_key, -unique(rotation_indices))
@@ -90,7 +90,7 @@ function init_rotation!(context::SecureContext{<:OpenFHEBackend}, private_key::P
 end
 
 # Computes rotation indices to enable 1D circshift
-function compute_rotation_indices(context, shape::Union{Integer, Tuple{Integer}}, shifts)
+function compute_rotation_indices_1d(context, shape, shifts)
     # extract capacity
     cc = get_crypto_context(context)
     capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
@@ -106,17 +106,6 @@ function compute_rotation_indices(context, shape::Union{Integer, Tuple{Integer}}
     indices = Int[]
     # iterate over all shifts
     for shift in shifts
-        if length(shift) > 1
-            throw(ArgumentError("Got shift with length $(length(shift)), expected 1"))
-        end
-        # shift can be tuple or vector
-        shift = shift[1]
-        # minimal required rotation
-        shift = shift % array_length
-        # convert negative shift to positive one
-        if shift < 0
-            shift = array_length + shift
-        end
         # add all required indices from implementation of rotate function
         shift += empty_places
         shift1 = div(shift, capacity)
@@ -137,27 +126,29 @@ end
 
 # Computes rotation indices to enable nD circshift (n>1).
 # Since nD circshift uses many 1D circshifts, this function 
-# computes required 1D shifts and then call the function from above
+# computes required 1D shifts and then call the function `compute_rotation_indices_1d `from above
 # to translate them into OpenFHE rotation indices
-function compute_rotation_indices(context, shape::NTuple{N, Integer}, shifts) where N
+function compute_rotation_indices_nd(context, shape, shifts)
+    # dimensionality of arrays
+    n = length(shape)
     # calculate length of each dimension
-    lengths = ones(Int, N)
-    for i in 2:N
+    lengths = ones(Int, n)
+    for i in 2:n
         lengths[i] = prod(shape[1:i-1])
     end
     # assemble 1d shifts
     shifts_1d = Int[]
     for shift in shifts
-        if length(shift) > N
-            throw(ArgumentError("Got shift with length $(length(shift)), expected $N"))
+        if length(shift) > n
+            throw(ArgumentError("Got shift with length $(length(shift)), expected $n"))
         else
             # if shift is shorter than shape, fill it up with zeros
-            shift = vcat(collect(shift), zeros(Integer, N - length(shift)))
+            shift = vcat(collect(shift), zeros(Integer, n - length(shift)))
         end
         # minimal required rotation
         shift = shift .% shape
         # convert negative shift to positive
-        for i in 1:N
+        for i in 1:n
             if shift[i] < 0
                 shift[i] = shape[i] + shift[i]
             end
@@ -167,7 +158,7 @@ function compute_rotation_indices(context, shape::NTuple{N, Integer}, shifts) wh
         push!(shifts_1d, main_1d_shift)
         # all possible combinations of dimensions (with non-zero shift)
         combinations = Vector{Int}[]
-        for i in 1:N-1
+        for i in 1:n-1
             if shift[i] != 0
                 append!(combinations, push!.(copy.(combinations), i))
                 push!(combinations, [i])
@@ -183,7 +174,7 @@ function compute_rotation_indices(context, shape::NTuple{N, Integer}, shifts) wh
     end
 
     # compute rotation indices for 1D circshift
-    compute_rotation_indices(context, prod(shape), shifts_1d)
+    compute_rotation_indices_1d(context, prod(shape), shifts_1d)
 end
 
 """
