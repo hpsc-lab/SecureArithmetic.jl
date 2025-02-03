@@ -120,14 +120,14 @@ function compute_rotation_indices(context, shape::Union{Integer, Tuple{Integer}}
         # add all required indices from implementation of rotate function
         shift += empty_places
         shift1 = div(shift, capacity)
-        index = shift - capacity * shift1
-        push!(indices, index)
+        rotation_index = shift - capacity * shift1
+        push!(indices, rotation_index)
         if empty_places != 0
             push!(indices, short_length)
             if shift1 % n_ciphertexts == 0
-                push!(indices, index - empty_places)
+                push!(indices, rotation_index - empty_places)
             else
-                push!(indices, index + short_length)
+                push!(indices, rotation_index + short_length)
             end
         end
     end
@@ -213,7 +213,7 @@ Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vect
 object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainVector`](@ref) with encoded but
 not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureVector`](@ref).
-    
+
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 [`OpenFHEBackend`](@ref)
 """
@@ -228,7 +228,7 @@ Constructor for data type [`PlainMatrix`](@ref) takes an unencrypted `data` matr
 object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainMatrix`](@ref) with encoded but
 not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureMatrix`](@ref).
-    
+
 See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 [`OpenFHEBackend`](@ref)
 """
@@ -243,7 +243,7 @@ Constructor for data type [`PlainArray`](@ref) takes an unencrypted `data` array
 object of type `SecureContext{<:OpenFHEBackend}`. Return [`PlainArray`](@ref) with encoded but
 not encrypted data. The `context` can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureArray`](@ref).
-    
+
 See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 [`OpenFHEBackend`](@ref)
 """

@@ -62,7 +62,7 @@ Constructor for data type [`PlainVector`](@ref) takes an unencrypted `data` vect
 object of type `SecureContext{<:Unencrypted}`. Returns [`PlainVector`](@ref) with not encoded and
 not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureVector`](@ref).
-        
+
 See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 """
 function PlainVector(data::Vector{<:Real}, context::SecureContext{<:Unencrypted})
@@ -76,7 +76,7 @@ Constructor for data type [`PlainMatrix`](@ref) takes an unencrypted `data` matr
 object of type `SecureContext{<:Unencrypted}`. Returns [`PlainMatrix`](@ref) with not encoded and
 not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureMatrix`](@ref).
-        
+
 See also: [`PlainMatrix`](@ref), [`SecureMatrix`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 """
 function PlainMatrix(data::Matrix{<:Real}, context::SecureContext{<:Unencrypted})
@@ -90,7 +90,7 @@ Constructor for data type [`PlainArray`](@ref) takes an unencrypted `data` array
 object of type `SecureContext{<:Unencrypted}`. Returns [`PlainArray`](@ref) with not encoded and
 not encrypted data. The context can be utilized later for encryption using [`encrypt`](@ref),
 resulting in [`SecureArray`](@ref).
-        
+
 See also: [`PlainArray`](@ref), [`SecureArray`](@ref), [`encrypt`](@ref), [`decrypt`](@ref)
 """
 function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
