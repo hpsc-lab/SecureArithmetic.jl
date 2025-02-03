@@ -126,7 +126,7 @@ from `Unencrypted`, the level is always equal to 0.
 See also: [`PlainArray`](@ref), [`SecureArray`](@ref)
 """
 function level(a::Union{SecureArray{<:Unencrypted}, PlainArray{<:Unencrypted}})
-    0
+    return 0
 end
 
 function encrypt_impl(data::Array{<:Real}, public_key::PublicKey,
