@@ -19,8 +19,8 @@ an unencrypted backend for fast verification of a computation pipeline.
 ### Prerequisites
 If you have not yet installed Julia, please [follow the instructions for your
 operating system](https://julialang.org/downloads/platform/).
-[SecureArithmetic.jl](https://github.com/hpsc-lab/SecureArithmetic.jl) works with Julia v1.8
-and later on Linux and macOS platforms, and with Julia v1.9 or later on Windows platforms.
+[SecureArithmetic.jl](https://github.com/hpsc-lab/SecureArithmetic.jl) works with Julia v1.10
+and later on Linux, macOS and Windows platforms.
 
 ### Installation
 Since SecureArithmetic.jl  is a registered Julia package, you can install it by executing
@@ -133,8 +133,9 @@ If you use SecureArithmetic.jl in your own research, please cite this repository
 
 
 ## Authors
-SecureArithmetic.jl was initiated by [Michael Schlottke-Lakemper](https://www.uni-augsburg.de/fakultaet/mntf/math/prof/hpsc)
-(University of Augsburg, Germany), who is also its principal maintainer.
+SecureArithmetic.jl was initiated by [Michael Schlottke-Lakemper](https://hpsc.math.uni-augsburg.de)
+(University of Augsburg, Germany). Together with Arseniy Kholod (University of Augsburg, Germany),
+he is its principal maintainer.
 
 
 ## License and contributing
