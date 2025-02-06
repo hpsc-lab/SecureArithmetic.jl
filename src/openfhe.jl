@@ -96,12 +96,12 @@ function compute_rotation_indices_1d(context, shape, shifts)
     capacity = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
     # length of an array
     array_length = prod(shape)
-    # length of short vector
-    short_length = array_length % capacity
-    # empty places in short vector
-    empty_places = capacity - short_length
     # number of ciphertexts in array
     n_ciphertexts = Int(ceil(array_length/capacity))
+    # empty places in short vector
+    empty_places = capacity * n_ciphertexts - array_length
+    # length of short vector
+    short_length = capacity - empty_places
     # store all indices to enable
     indices = Int[]
     # iterate over all shifts
@@ -111,15 +111,9 @@ function compute_rotation_indices_1d(context, shape, shifts)
         shift1 = div(shift, capacity)
         rotation_index = shift - capacity * shift1
         push!(indices, rotation_index)
-        if empty_places != 0
-            push!(indices, short_length)
-            if shift1 % n_ciphertexts == 0
-                push!(indices, rotation_index - empty_places)
-            else
-                push!(indices, rotation_index + short_length)
-            end
-        end
+        push!(indices, rotation_index - empty_places)
     end
+    push!(indices, short_length)
 
     indices
 end
