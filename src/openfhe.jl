@@ -526,33 +526,8 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     sv = circshift(sv, shift1)
     # rotation index for individual ciphertexts
     rotation_index = shift - vec_capacity * shift1
-    # if the last ciphertext is also full, rotation is simpler
-    if empty_places == 0
-        # shift each ciphertext
-        for i in eachindex(sv)
-            sv[i] = OpenFHE.EvalRotate(cc, sv[i], -rotation_index)
-        end
-        # first rotation_index elements of each ciphertext have to be moved 
-        # to the first rotation_index elements of next ciphertext if there are more than one ciphertexts 
-        if length(sv) > 1
-            sv_new = similar(sv)
-            # mask for first rotation_index elements of each ciphertext
-            mask1 = zeros(vec_capacity)
-            mask1[1:rotation_index] .= 1
-            mask1 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask1)
-            # mask for remaining part of each ciphertext
-            mask2 = zeros(vec_capacity)
-            mask2[rotation_index+1:end] .= 1
-            mask2 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask2)
-            for i in eachindex(sv)
-                sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[i], mask1),
-                                            OpenFHE.EvalMult(cc, sv[i], mask2))
-            end
-            sv = sv_new
-        end
-    # next case when after rotating a whole array (not individual ciphertexts) 
-    # short ciphertext is already the last one 
-    elseif shift1 % length(sv) == 0
+    # if the last ciphertext is also full or the short one at the end, rotation is simpler
+    if empty_places == 0 || shift1 % length(sv) == 0
         # if short ciphertext is at the end, shift does not need to be corrected due to its empty places 
         # (except for the short ciphertext), change the rotation index back
         rotation_index -= empty_places
@@ -578,9 +553,13 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
         end
         # The last ciphertext have to be also additionally rotated by its length, so that elements stay
         # at correct position
-        sv_new[end] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[end], mask1),
-                                      OpenFHE.EvalMult(cc, OpenFHE.EvalRotate(cc, sv[end], -short_length), mask2))
-        sv = sv_new
+        if length(sv) > 1 || empty_places != 0
+            sv_new[end] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[end], mask1),
+                                          OpenFHE.EvalMult(cc, OpenFHE.EvalRotate(cc, sv[end], -short_length), mask2))
+        else
+            sv_new[end] = sv[end]
+        end
+        sv = sv_new        
     # The last case when short ciphertext is not the last one and its empty places have to be filled,
     # so that the last ciphertext still the only short one
     else
