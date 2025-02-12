@@ -636,15 +636,6 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
     end
     # combination of all shifts (in each dimension) in 1D shift
     main_1d_shift = sum(shift .* lengths)
-    # indices for array iteration
-    indices = Vector(undef, N)
-    # mask for main part
-    main_mask = ones(Int, size(sa))
-    for i in 1:N-1
-        indices[:] .= range.(1, size(sa))
-        indices[i] = (size(sa)[i] - shift[i] + 1):size(sa)[i]
-        main_mask[indices...] .= 0
-    end
     # compute all combinations of dimensions (except last one and with non-zero shift)
     # to retrieve cyclicity
     combinations = Vector{Int}[]
@@ -654,14 +645,19 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
             push!(combinations, [i])
         end
     end
-    # masks to retrieve cyclicity
+    # mask for main part shifted by `main_1d_shift`
+    main_mask = ones(Int, size(sa))
+    # masks to retrieve cyclicity, for each of `combinations`
     masks = []
+    # indices for array iteration
+    indices = Vector(undef, N)
     # additional 1D shifts for masked dimension combinations
     masked_1d_shift = []
     for i in combinations
         push!(masked_1d_shift, main_1d_shift)
+        # correctly rotated elements 
         indices[:] .= range.(1, size(sa) .- shift)
-        indices[end] = range.(1, size(sa)[end])
+        indices[end] = range(1, size(sa)[end])
         # correct indices to include only elements that are
         # shifted in the given combination i
         for j in i
@@ -670,6 +666,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
         end
         push!(masks, zeros(Int, size(sa)))
         masks[end][indices...] .= 1
+        main_mask[indices...] .= 0
     end
     # convert masks to PlainArray's
     main_mask = PlainArray(vec(main_mask), sa.context)
