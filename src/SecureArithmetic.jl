@@ -1,7 +1,6 @@
 module SecureArithmetic
 
 using OpenFHE: OpenFHE
-using Base.ScopedValues: ScopedValue, with
 
 # Basic types
 export SecureContext, SecureVector, PlainVector, PlainMatrix, SecureMatrix,
@@ -24,7 +23,7 @@ export level, capacity
 export release_context_memory
 
 # Multithreading
-export with_multithreading, enable_multithreading, disable_multithreading
+export enable_multithreading, disable_multithreading
 
 include("auxiliary.jl")
 include("types.jl")

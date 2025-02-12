@@ -202,6 +202,14 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa4, [-1, -2, -1, 2]), private_key)) ≈ circshift(a4, [-1, -2, -1, 2])
         end
 
+        @testset verbose=true showtiming=true "multithreading" begin
+            @test enable_multithreading()
+            @test collect(decrypt(sa1 + sa2, private_key)) ≈ a1 .+ a2
+            @test collect(decrypt(sa1 * sa2, private_key)) ≈ a1 .* a2
+            @test collect(decrypt(circshift(sa1, -14), private_key)) ≈ circshift(a1, -14)
+            @test !disable_multithreading()
+        end
+
         @testset verbose=true showtiming=true "length" begin
             @test length(pv1) == length(x1)
             @test length(sv1) == length(pv1)
