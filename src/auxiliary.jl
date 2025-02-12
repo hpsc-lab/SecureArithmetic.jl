@@ -1,8 +1,6 @@
 threads_enabled = false
 
-function enable_multithreading(enabled=true)
-    global threads_enabled = enabled
-end
+enable_multithreading(enabled=true) = global threads_enabled = enabled
 disable_multithreading() = enable_multithreading(false)
 
 macro threaded(expr)
