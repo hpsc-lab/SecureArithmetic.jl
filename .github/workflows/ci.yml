@@ -40,6 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
+          - '1.10'
           - '1.11'
         os:
           - ubuntu-latest
@@ -54,8 +55,6 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-        with:
-            prefix: --threads=2
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,examples

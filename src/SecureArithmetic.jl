@@ -22,10 +22,6 @@ export level, capacity
 # Memory management
 export release_context_memory
 
-# Multithreading
-export enable_multithreading, disable_multithreading
-
-include("auxiliary.jl")
 include("types.jl")
 include("operations.jl")
 include("openfhe.jl")
