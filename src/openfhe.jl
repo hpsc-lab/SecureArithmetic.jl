@@ -512,10 +512,9 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     short_length = vec_capacity - empty_slots
     # update required shift with respect of empty slots in last ciphertext
     shift += empty_slots
-    # shift vector of ciphertexts, so that shift is only required in each ciphertext
+    # shift for vector of ciphertexts, so that shift is only required in each ciphertext
     # and between direct neighbours
     shift1 = div(shift, vec_capacity)
-    # for all ciphertexts before short one first rotation_index elements have to be moved from the previous ciphertext
     # operate with data stored as a vector of ciphertexts
     sv = similar(sa.data)
     sv_new = similar(sa.data)
@@ -600,7 +599,7 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
         # mask for last n_shift elements
         mask4 = zeros(vec_capacity)
         mask4[end-n_shift+1:end] .= 1
-        # mask for first capacity-n_shift elements
+        # mask for the rest elements
         mask5 = OpenFHE.MakeCKKSPackedPlaintext(cc, 1 .- mask4)
         mask4 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask4)
         # short ciphertext is a combination of first rotation_index elements of previous ciphertext,
