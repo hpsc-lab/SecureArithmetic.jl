@@ -55,7 +55,7 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - name: Run tests
-        run: julia --project=. --color=yes --threads=2 runtests.jl
+        run: julia --project=. --color=yes --threads=2 test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,examples
