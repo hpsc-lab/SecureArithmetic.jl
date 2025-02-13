@@ -44,7 +44,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                                         (1, -1), -1, (1, 1), (0, 1), (1, 0))
             @test_nowarn init_rotation!(context, private_key, (4, 2), 2)
             @test_nowarn init_rotation!(context, private_key, 30, 1, (-14,), 10, 7)
-            @test_nowarn init_rotation!(context, private_key, (32,), 2, [3])
+            @test_nowarn init_rotation!(context, private_key, (32,), 2, [3], 8)
             @test_nowarn init_rotation!(context, private_key, (4, 3, 4, 5), [0, 3, 1, -3], [-1, -2, -1, 2])
             @test_nowarn init_rotation!(context, private_key, (3,), 1, -2)
             if name == "OpenFHE"
@@ -198,6 +198,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa1, (3,)), private_key)) ≈ circshift(a1, (3,))
             @test collect(decrypt(circshift(sa1, 0), private_key)) ≈ circshift(a1, 0)
             @test collect(decrypt(circshift(sa3, 2), private_key)) ≈ circshift(a3, 2)
+            @test collect(decrypt(circshift(sa3, 8), private_key)) ≈ circshift(a3, 8)
             @test collect(decrypt(circshift(sa4, (0, 3, 1, -3)), private_key)) ≈ circshift(a4, (0, 3, 1, -3))
             @test collect(decrypt(circshift(sa4, [-1, -2, -1, 2]), private_key)) ≈ circshift(a4, [-1, -2, -1, 2])
         end
