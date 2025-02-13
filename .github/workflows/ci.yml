@@ -58,10 +58,9 @@ jobs:
         uses: julia-actions/julia-runtest@v1
       - name: Run multithreaded tests
         uses: julia-actions/julia-runtest@v1
-        with:
-          coverage: false
         env:
           JULIA_NUM_THREADS: 2
+          OMP_NUM_THREADS: 1
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,examples
