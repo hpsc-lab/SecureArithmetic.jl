@@ -1,4 +1,4 @@
-const threads_enabled = Ref(false)
+const threads_enabled::Base.RefValue{Bool} = Ref(false)
 
 """
     enable_multithreading(enabled=true)

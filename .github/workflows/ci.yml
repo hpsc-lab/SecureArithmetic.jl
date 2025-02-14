@@ -54,10 +54,7 @@ jobs:
       - run: julia -e 'using InteractiveUtils; versioninfo(verbose=true)'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-      - name: Run single-threaded tests
-        uses: julia-actions/julia-runtest@v1
-      - name: Run multithreaded tests
-        uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-runtest@v1
         env:
           JULIA_NUM_THREADS: 2
           OMP_NUM_THREADS: 1
