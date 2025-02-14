@@ -6,7 +6,14 @@ const threads_enabled = Ref(false)
 Enable multithreaded execution when `enabled` is set to `true`.  
 To disable multithreading, use `disable_multithreading`.
 
-Note: By default multithreading is disabled
+This multithreading capability takes place entirely on the Julia side and parallelizes
+operations over multiple ciphertexts within a single `SecureArray`. That is, it will
+have no effect if only one ciphertext is sufficient to hold all data. Please be aware
+that mixing Julia's multithreading with OpenFHE's builtin OpenMP-based multithreading
+might cause troubles. Thus if in doubt, set the environment variable `OMP_NUM_THREADS=1`
+to avoid potential issues.
+
+Note: By default multithreading is disabled.
 
 See also: [`disable_multithreading`](@ref)
 """

@@ -119,6 +119,29 @@ By running these commands at appropriate points in your code, you can prevent ex
 usage and ensure efficient memory management when using SecureArithmetic.jl.
 
 
+### Multithreading
+[`SecureArray`](@ref) stores data across multiple ciphertexts. Since most operations are element-wise,
+they can be parallelized across different threads. By default, parallelization is disabled, enable it
+with [`enable_multithreading`](@ref).
+```julia
+enable_multithreading()
+```
+To disable it, use [`disable_multithreading`](@ref)
+```julia
+disable_multithreading()
+```
+When multithreading is enabled, `for` loops iterating over ciphertexts in `SecureArray` use
+`Threads.@threads` to distribute work across `Threads.nthreads()` threads. However, if Julia runs
+with only one thread (`Threads.nthreads() == 1`), `Threads.@threads` is not applied for efficiency.
+
+Since multithreading works by splitting `for` loops over ciphertexts in `SecureArray`,
+it is only effective if there are at least two ciphertexts.
+
+Please be aware that mixing Julia's multithreading with OpenFHE's builtin OpenMP-based
+multithreading might cause troubles. Thus if in doubt, set the environment variable
+`OMP_NUM_THREADS=1` to avoid potential issues.
+
+
 ## Referencing
 If you use SecureArithmetic.jl in your own research, please cite this repository as follows:
 ```bibtex
