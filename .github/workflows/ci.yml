@@ -60,7 +60,7 @@ jobs:
           JULIA_NUM_THREADS: 1
           OMP_NUM_THREADS: 2
       - name: Run tests with Julia-based multithreading
-        # Test sometimes fails on macOS, due to a small thread stack size.
+        # Test sometimes fails on macOS due to a small thread stack size.
         if: ${{ matrix.os != 'macOS-latest' }}
         uses: julia-actions/julia-runtest@v1
         env:
