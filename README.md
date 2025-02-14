@@ -120,13 +120,14 @@ usage and ensure efficient memory management when using SecureArithmetic.jl.
 
 
 ### Multithreading
-[`SecureArray`](@ref) stores data across multiple ciphertexts. Since most operations are element-wise,
-they can be parallelized across different threads. By default, parallelization is disabled, enable it
-with [`enable_multithreading`](@ref).
+[`SecureArray`](@ref) internally stores encrypted data across multiple ciphertexts.
+Since most operations with secure arrays - such as addition, multiplication, or bootstrapping -
+are performed for each ciphertext individually, they can be parallelized across different threads.
+By default, parallelization is disabled - you can enable it with [`enable_multithreading`](@ref):
 ```julia
 enable_multithreading()
 ```
-To disable it, use [`disable_multithreading`](@ref)
+To disable it, use [`disable_multithreading`](@ref):
 ```julia
 disable_multithreading()
 ```
