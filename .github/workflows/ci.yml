@@ -58,7 +58,7 @@ jobs:
         env:
           JULIA_NUM_THREADS: 2
           OMP_NUM_THREADS: 1
-          OMP_STACKSIZE: 2G
+          OMP_STACKSIZE: 4G
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,examples
