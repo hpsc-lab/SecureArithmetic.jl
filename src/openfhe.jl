@@ -107,6 +107,9 @@ function compute_rotation_indices_1d(context, shape, shifts)
     # iterate over all shifts
     for shift in shifts
         # add all required indices from implementation of rotate function
+        if shift < 0
+            shift = array_length + shift
+        end
         shift += empty_slots
         shift1 = div(shift, capacity)
         rotation_index = shift - capacity * shift1
