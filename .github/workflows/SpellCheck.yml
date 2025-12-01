@@ -9,5 +9,7 @@ jobs:
     steps:
       - name: Checkout Actions Repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: true
       - name: Check spelling
         uses: crate-ci/typos@v1.39.2
