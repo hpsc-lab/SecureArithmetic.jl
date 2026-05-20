@@ -46,6 +46,31 @@ function decrypt(secure_array::SecureArray, private_key::PrivateKey)
 end
 
 """
+    serialize(obj)
+
+Serialize `obj` to a JSON string.
+
+See also: [`deserialize`](@ref)
+"""
+function serialize(obj)
+    # Convert from C++ string to Julia String for memory safety
+    String(OpenFHE.SerializeToString(obj))
+end
+
+"""
+    deserialize(::Type{T}, json::AbstractString)
+
+Deserialize a JSON string `json` into a new object of type `T`.
+
+See also: [`serialize`](@ref)
+"""
+function deserialize(::Type{T}, json::AbstractString) where T
+    obj = T()
+    OpenFHE.DeserializeFromString(obj, json)
+    return obj
+end
+
+"""
     release_context_memory()
 
 Release all `OpenFHE.CryptoContext`s and keys for multiplication, rotation, bootstrapping and
