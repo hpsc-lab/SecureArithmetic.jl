@@ -46,23 +46,17 @@ end
 
 function print_results(results, label)
     objects = ["CryptoContext", "PublicKey", "PrivateKey", "Ciphertext"]
-    formats = ["string (JSON)", "JSON file", "binary file"]
+    formats = ["String (JSON)", "JSON file", "Binary file"]
 
-    col_w = 16
-    header = rpad("Object", col_w) * join(rpad.(formats, col_w))
-    println(label)
-    println("-"^length(header))
-    println(header)
-    println("-"^length(header))
-
+    println("### $label")
+    println()
+    println("| Object | $(join(formats, " | ")) |")
+    println("| $(join(fill("---", length(formats) + 1), " | ")) |")
     for name in objects
         haskey(results, name) || continue
         sizes = results[name]
-        row = rpad(name, col_w)
-        for fmt in formats
-            row *= rpad(format_bytes(sizes[fmt]), col_w)
-        end
-        println(row)
+        cols = [format_bytes(sizes[fmt]) for fmt in ["string (JSON)", "JSON file", "binary file"]]
+        println("| $name | $(join(cols, " | ")) |")
     end
     println()
 end
@@ -73,7 +67,7 @@ security_levels = [
     ("HEStd_256_classic", HEStd_256_classic),
 ]
 
-multiplicative_depth = 1
+multiplicative_depth = 2
 scaling_modulus = 50
 batch_size = 8
 x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
