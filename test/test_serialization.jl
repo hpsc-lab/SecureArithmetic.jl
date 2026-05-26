@@ -97,6 +97,78 @@ sm1 = encrypt(pm1, public_key)
     @test collect(decrypt(sm_restored, sk_restored)) ≈ collect(decrypt(sm1, private_key))
 end
 
+@testset verbose=true showtiming=true "serialize_to_binary_file / deserialize_from_binary_file" begin
+    mktempdir() do dir
+        cc_file = joinpath(dir, "cc.bin")
+        pk_file = joinpath(dir, "pk.bin")
+        sk_file = joinpath(dir, "sk.bin")
+        ct_file = joinpath(dir, "ct.bin")
+
+        @test serialize_to_binary_file(cc_file, cc) == true
+        @test serialize_to_binary_file(pk_file, public_key.public_key) == true
+        @test serialize_to_binary_file(sk_file, private_key.private_key) == true
+        @test serialize_to_binary_file(ct_file, sv1.data[1]) == true
+
+        cc_restored = deserialize_from_binary_file(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, cc_file)
+        @test cc_restored isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
+
+        context_restored = SecureContext(OpenFHEBackend(cc_restored))
+
+        pk_restored = deserialize_from_binary_file(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, pk_file)
+        @test pk_restored isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
+
+        sk_restored = SecureArithmetic.PrivateKey(context_restored,
+            deserialize_from_binary_file(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, sk_file))
+
+        ct_restored = deserialize_from_binary_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, ct_file)
+        @test ct_restored isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
+
+        restored_cts = map(sv1.data) do ct
+            f = joinpath(dir, "ct_tmp.bin")
+            serialize_to_binary_file(f, ct)
+            deserialize_from_binary_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, f)
+        end
+        sv_restored = SecureArray(collect(restored_cts), size(sv1), capacity(sv1), context_restored)
+        @test collect(decrypt(sv_restored, sk_restored)) ≈ collect(decrypt(sv1, private_key))
+    end
+end
+
+@testset verbose=true showtiming=true "serialize_to_json_file / deserialize_from_json_file" begin
+    mktempdir() do dir
+        cc_file = joinpath(dir, "cc.json")
+        pk_file = joinpath(dir, "pk.json")
+        sk_file = joinpath(dir, "sk.json")
+        ct_file = joinpath(dir, "ct.json")
+
+        @test serialize_to_json_file(cc_file, cc) == true
+        @test serialize_to_json_file(pk_file, public_key.public_key) == true
+        @test serialize_to_json_file(sk_file, private_key.private_key) == true
+        @test serialize_to_json_file(ct_file, sv1.data[1]) == true
+
+        cc_restored = deserialize_from_json_file(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, cc_file)
+        @test cc_restored isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
+
+        context_restored = SecureContext(OpenFHEBackend(cc_restored))
+
+        pk_restored = deserialize_from_json_file(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, pk_file)
+        @test pk_restored isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
+
+        sk_restored = SecureArithmetic.PrivateKey(context_restored,
+            deserialize_from_json_file(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, sk_file))
+
+        ct_restored = deserialize_from_json_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, ct_file)
+        @test ct_restored isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
+
+        restored_cts = map(sv1.data) do ct
+            f = joinpath(dir, "ct_tmp.json")
+            serialize_to_json_file(f, ct)
+            deserialize_from_json_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, f)
+        end
+        sv_restored = SecureArray(collect(restored_cts), size(sv1), capacity(sv1), context_restored)
+        @test collect(decrypt(sv_restored, sk_restored)) ≈ collect(decrypt(sv1, private_key))
+    end
+end
+
 release_context_memory()
 GC.gc()
 

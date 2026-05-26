@@ -71,6 +71,56 @@ function deserialize(::Type{T}, json::AbstractString) where T
 end
 
 """
+    serialize_to_binary_file(filename::AbstractString, obj)
+
+Serialize `obj` to a binary file at `filename`.
+Returns `true` if the file was written successfully, `false` otherwise.
+
+See also: [`deserialize_from_binary_file`](@ref), [`serialize_to_json_file`](@ref)
+"""
+function serialize_to_binary_file(filename::AbstractString, obj)
+    OpenFHE.SerializeToFile(filename, obj, OpenFHE.SERBINARY())
+end
+
+"""
+    serialize_to_json_file(filename::AbstractString, obj)
+
+Serialize `obj` to a JSON file at `filename`.
+Returns `true` if the file was written successfully, `false` otherwise.
+
+See also: [`deserialize_from_json_file`](@ref), [`serialize_to_binary_file`](@ref)
+"""
+function serialize_to_json_file(filename::AbstractString, obj)
+    OpenFHE.SerializeToFile(filename, obj, OpenFHE.SERJSON())
+end
+
+"""
+    deserialize_from_binary_file(::Type{T}, filename::AbstractString)
+
+Deserialize from a binary file at `filename` into a new object of type `T`.
+
+See also: [`serialize_to_binary_file`](@ref), [`deserialize_from_json_file`](@ref)
+"""
+function deserialize_from_binary_file(::Type{T}, filename::AbstractString) where T
+    obj = T()
+    OpenFHE.DeserializeFromFile(filename, obj, OpenFHE.SERBINARY())
+    return obj
+end
+
+"""
+    deserialize_from_json_file(::Type{T}, filename::AbstractString)
+
+Deserialize from a JSON file at `filename` into a new object of type `T`.
+
+See also: [`serialize_to_json_file`](@ref), [`deserialize_from_binary_file`](@ref)
+"""
+function deserialize_from_json_file(::Type{T}, filename::AbstractString) where T
+    obj = T()
+    OpenFHE.DeserializeFromFile(filename, obj, OpenFHE.SERJSON())
+    return obj
+end
+
+"""
     release_context_memory()
 
 Release all `OpenFHE.CryptoContext`s and keys for multiplication, rotation, bootstrapping and
