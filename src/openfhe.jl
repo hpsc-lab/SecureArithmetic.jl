@@ -693,3 +693,81 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
 
     SecureArray(sv_new.data, size(sa), capacity(sa), sa.context)
 end
+
+
+############################################################################################
+# Julia Serialization overloads
+############################################################################################
+
+function Serialization.serialize(s::Serialization.AbstractSerializer,
+                                 ctx::SecureContext{<:OpenFHEBackend})
+    Serialization.serialize_type(s, typeof(ctx))
+    Serialization.serialize(s, String(OpenFHE.SerializeToString(get_crypto_context(ctx))))
+end
+
+function Serialization.deserialize(s::Serialization.AbstractSerializer,
+                                   ::Type{T}) where {T <: SecureContext{<:OpenFHEBackend}}
+    json = Serialization.deserialize(s)
+    cc = OpenFHE.CryptoContext{OpenFHE.DCRTPoly}()
+    OpenFHE.DeserializeFromString(cc, json)
+    SecureContext(OpenFHEBackend(cc))
+end
+
+function Serialization.serialize(s::Serialization.AbstractSerializer,
+                                 key::PublicKey{<:OpenFHEBackend})
+    Serialization.serialize_type(s, typeof(key))
+    Serialization.serialize(s, key.context)
+    Serialization.serialize(s, String(OpenFHE.SerializeToString(key.public_key)))
+end
+
+function Serialization.deserialize(s::Serialization.AbstractSerializer,
+                                   ::Type{T}) where {T <: PublicKey{<:OpenFHEBackend}}
+    ctx = Serialization.deserialize(s)
+    json = Serialization.deserialize(s)
+    pk = OpenFHE.PublicKey{OpenFHE.DCRTPoly}()
+    OpenFHE.DeserializeFromString(pk, json)
+    PublicKey(ctx, pk)
+end
+
+function Serialization.serialize(s::Serialization.AbstractSerializer,
+                                 key::PrivateKey{<:OpenFHEBackend})
+    Serialization.serialize_type(s, typeof(key))
+    Serialization.serialize(s, key.context)
+    Serialization.serialize(s, String(OpenFHE.SerializeToString(key.private_key)))
+end
+
+function Serialization.deserialize(s::Serialization.AbstractSerializer,
+                                   ::Type{T}) where {T <: PrivateKey{<:OpenFHEBackend}}
+    ctx = Serialization.deserialize(s)
+    json = Serialization.deserialize(s)
+    sk = OpenFHE.PrivateKey{OpenFHE.DCRTPoly}()
+    OpenFHE.DeserializeFromString(sk, json)
+    PrivateKey(ctx, sk)
+end
+
+function Serialization.serialize(s::Serialization.AbstractSerializer,
+                                 sa::SecureArray{<:OpenFHEBackend})
+    Serialization.serialize_type(s, typeof(sa))
+    Serialization.serialize(s, sa.context)
+    Serialization.serialize(s, sa.shape)
+    Serialization.serialize(s, sa.capacity)
+    Serialization.serialize(s, length(sa.data))
+    for ct in sa.data
+        Serialization.serialize(s, String(OpenFHE.SerializeToString(ct)))
+    end
+end
+
+function Serialization.deserialize(s::Serialization.AbstractSerializer,
+                                   ::Type{T}) where {T <: SecureArray{<:OpenFHEBackend}}
+    ctx = Serialization.deserialize(s)
+    shape = Serialization.deserialize(s)
+    cap = Serialization.deserialize(s)
+    n = Serialization.deserialize(s)
+    cts = map(1:n) do _
+        json = Serialization.deserialize(s)
+        ct = OpenFHE.Ciphertext{OpenFHE.DCRTPoly}()
+        OpenFHE.DeserializeFromString(ct, json)
+        ct
+    end
+    SecureArray(cts, shape, cap, ctx)
+end

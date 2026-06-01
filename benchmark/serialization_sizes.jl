@@ -1,4 +1,5 @@
 using SecureArithmetic
+using Serialization
 using OpenFHE
 using Printf
 
@@ -12,51 +13,35 @@ function format_bytes(n)
     end
 end
 
-function measure_sizes(cc, public_key, private_key, ciphertext)
+function measure_sizes(context, public_key, private_key, secure_vector)
     objects = [
-        ("CryptoContext", cc),
-        ("PublicKey",     public_key.public_key),
-        ("PrivateKey",    private_key.private_key),
-        ("Ciphertext",    ciphertext),
+        ("SecureContext", context),
+        ("PublicKey",     public_key),
+        ("PrivateKey",    private_key),
+        ("SecureVector",  secure_vector),
     ]
 
-    results = Dict{String, Dict{String, Int}}()
+    results = Dict{String, Int}()
 
-    mktempdir() do dir
-        for (name, obj) in objects
-            sizes = Dict{String, Int}()
-
-            json_str = serialize_to_json_string(obj)
-            sizes["string (JSON)"] = sizeof(json_str)
-
-            bin_file = joinpath(dir, "$(name).bin")
-            serialize_to_binary_file(bin_file, obj)
-            sizes["binary file"] = filesize(bin_file)
-
-            json_file = joinpath(dir, "$(name).json")
-            serialize_to_json_file(json_file, obj)
-            sizes["JSON file"] = filesize(json_file)
-
-            results[name] = sizes
-        end
+    for (name, obj) in objects
+        io = IOBuffer()
+        serialize(io, obj)
+        results[name] = position(io)
     end
 
     return results
 end
 
 function print_results(results, label)
-    objects = ["CryptoContext", "PublicKey", "PrivateKey", "Ciphertext"]
-    formats = ["String (JSON)", "JSON file", "Binary file"]
+    objects = ["SecureContext", "PublicKey", "PrivateKey", "SecureVector"]
 
     println("### $label")
     println()
-    println("| Object | $(join(formats, " | ")) |")
-    println("| $(join(fill("---", length(formats) + 1), " | ")) |")
+    println("| Object | Size |")
+    println("| --- | --- |")
     for name in objects
         haskey(results, name) || continue
-        sizes = results[name]
-        cols = [format_bytes(sizes[fmt]) for fmt in ["string (JSON)", "JSON file", "binary file"]]
-        println("| $name | $(join(cols, " | ")) |")
+        println("| $name | $(format_bytes(results[name])) |")
     end
     println()
 end
@@ -92,9 +77,8 @@ for (level_name, level) in security_levels
 
     pv = PlainVector(x1, context)
     sv = encrypt(pv, public_key)
-    ct = sv.data[1]
 
-    results = measure_sizes(cc, public_key, private_key, ct)
+    results = measure_sizes(context, public_key, private_key, sv)
     print_results(results, "$level_name (ring dimension = $ring_dim)")
 
     release_context_memory()
