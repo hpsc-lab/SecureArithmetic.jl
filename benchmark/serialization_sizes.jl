@@ -26,7 +26,7 @@ function measure_sizes(cc, public_key, private_key, ciphertext)
         for (name, obj) in objects
             sizes = Dict{String, Int}()
 
-            json_str = serialize(obj)
+            json_str = serialize_to_json_string(obj)
             sizes["string (JSON)"] = sizeof(json_str)
 
             bin_file = joinpath(dir, "$(name).bin")

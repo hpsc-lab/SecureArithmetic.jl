@@ -46,25 +46,30 @@ function decrypt(secure_array::SecureArray, private_key::PrivateKey)
 end
 
 """
-    serialize(obj)
+    serialize_to_json_string(obj)
 
 Serialize `obj` to a JSON string.
 
-See also: [`deserialize`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`deserialize_from_json_string`](@ref)
 """
-function serialize(obj)
-    # Convert from C++ string to Julia String for memory safety
+function serialize_to_json_string(obj)
     String(OpenFHE.SerializeToString(obj))
 end
 
 """
-    deserialize(::Type{T}, json::AbstractString)
+    deserialize_from_json_string(::Type{T}, json::AbstractString)
 
 Deserialize a JSON string `json` into a new object of type `T`.
 
-See also: [`serialize`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`serialize_to_json_string`](@ref)
 """
-function deserialize(::Type{T}, json::AbstractString) where T
+function deserialize_from_json_string(::Type{T}, json::AbstractString) where T
     obj = T()
     OpenFHE.DeserializeFromString(obj, json)
     return obj
@@ -76,7 +81,10 @@ end
 Serialize `obj` to a binary file at `filename`.
 Returns `true` if the file was written successfully, `false` otherwise.
 
-See also: [`deserialize_from_binary_file`](@ref), [`serialize_to_json_file`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`deserialize_from_binary_file`](@ref), [`serialize_to_json_file`](@ref), [`serialize_to_json_string`](@ref)
 """
 function serialize_to_binary_file(filename::AbstractString, obj)
     OpenFHE.SerializeToFile(filename, obj, OpenFHE.SERBINARY())
@@ -88,7 +96,10 @@ end
 Serialize `obj` to a JSON file at `filename`.
 Returns `true` if the file was written successfully, `false` otherwise.
 
-See also: [`deserialize_from_json_file`](@ref), [`serialize_to_binary_file`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`deserialize_from_json_file`](@ref), [`serialize_to_binary_file`](@ref), [`serialize_to_json_string`](@ref)
 """
 function serialize_to_json_file(filename::AbstractString, obj)
     OpenFHE.SerializeToFile(filename, obj, OpenFHE.SERJSON())
@@ -99,7 +110,10 @@ end
 
 Deserialize from a binary file at `filename` into a new object of type `T`.
 
-See also: [`serialize_to_binary_file`](@ref), [`deserialize_from_json_file`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`serialize_to_binary_file`](@ref), [`deserialize_from_json_file`](@ref), [`deserialize_from_json_string`](@ref)
 """
 function deserialize_from_binary_file(::Type{T}, filename::AbstractString) where T
     obj = T()
@@ -112,7 +126,10 @@ end
 
 Deserialize from a JSON file at `filename` into a new object of type `T`.
 
-See also: [`serialize_to_json_file`](@ref), [`deserialize_from_binary_file`](@ref)
+!!! warning "Experimental"
+    This is an experimental implementation and its API may change in future versions.
+
+See also: [`serialize_to_json_file`](@ref), [`deserialize_from_binary_file`](@ref), [`deserialize_from_json_string`](@ref)
 """
 function deserialize_from_json_file(::Type{T}, filename::AbstractString) where T
     obj = T()

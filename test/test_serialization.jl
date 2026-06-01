@@ -29,49 +29,49 @@ sv1 = encrypt(pv1, public_key)
 
 @testset verbose=true showtiming=true "Ciphertext" begin
     for ct in sv1.data
-        json = serialize(ct)
+        json = serialize_to_json_string(ct)
         @test json isa String
         @test !isempty(json)
-        ct_deserialized = deserialize(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, json)
+        ct_deserialized = deserialize_from_json_string(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, json)
         @test ct_deserialized isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
     end
 end
 
 @testset verbose=true showtiming=true "CryptoContext" begin
-    json = serialize(cc)
+    json = serialize_to_json_string(cc)
     @test json isa String
     @test !isempty(json)
-    cc_deserialized = deserialize(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, json)
+    cc_deserialized = deserialize_from_json_string(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, json)
     @test cc_deserialized isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
 end
 
 @testset verbose=true showtiming=true "PublicKey" begin
-    json = serialize(public_key.public_key)
+    json = serialize_to_json_string(public_key.public_key)
     @test json isa String
     @test !isempty(json)
-    pk_deserialized = deserialize(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, json)
+    pk_deserialized = deserialize_from_json_string(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, json)
     @test pk_deserialized isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
 end
 
 @testset verbose=true showtiming=true "PrivateKey" begin
-    json = serialize(private_key.private_key)
+    json = serialize_to_json_string(private_key.private_key)
     @test json isa String
     @test !isempty(json)
-    sk_deserialized = deserialize(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, json)
+    sk_deserialized = deserialize_from_json_string(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, json)
     @test sk_deserialized isa OpenFHE.PrivateKey{OpenFHE.DCRTPoly}
 end
 
 # Note: shape and capacity must be transmitted as metadata alongside the serialized
 # ciphertexts, since OpenFHE serialization does not preserve this information.
 @testset verbose=true showtiming=true "roundtrip vector" begin
-    cc_restored = deserialize(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, serialize(cc))
+    cc_restored = deserialize_from_json_string(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, serialize_to_json_string(cc))
     context_restored = SecureContext(OpenFHEBackend(cc_restored))
 
     sk_restored = SecureArithmetic.PrivateKey(context_restored,
-        deserialize(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, serialize(private_key.private_key)))
+        deserialize_from_json_string(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, serialize_to_json_string(private_key.private_key)))
 
     restored_cts = map(sv1.data) do ct
-        deserialize(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, serialize(ct))
+        deserialize_from_json_string(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, serialize_to_json_string(ct))
     end
     sv_restored = SecureArray(collect(restored_cts), size(sv1), capacity(sv1), context_restored)
 
@@ -83,14 +83,14 @@ pm1 = PlainMatrix(x2, context)
 sm1 = encrypt(pm1, public_key)
 
 @testset verbose=true showtiming=true "roundtrip matrix" begin
-    cc_restored = deserialize(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, serialize(cc))
+    cc_restored = deserialize_from_json_string(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, serialize_to_json_string(cc))
     context_restored = SecureContext(OpenFHEBackend(cc_restored))
 
     sk_restored = SecureArithmetic.PrivateKey(context_restored,
-        deserialize(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, serialize(private_key.private_key)))
+        deserialize_from_json_string(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, serialize_to_json_string(private_key.private_key)))
 
     restored_cts = map(sm1.data) do ct
-        deserialize(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, serialize(ct))
+        deserialize_from_json_string(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, serialize_to_json_string(ct))
     end
     sm_restored = SecureArray(collect(restored_cts), size(sm1), capacity(sm1), context_restored)
 
