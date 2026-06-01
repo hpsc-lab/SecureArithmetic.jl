@@ -169,6 +169,59 @@ end
     end
 end
 
+@testset verbose=true showtiming=true "type stability" begin
+    ct = sv1.data[1]
+    json = serialize_to_json_string(ct)
+    # @inferred throws an Error if the return type is not what the compiler inferred. See https://docs.julialang.org/en/v1/stdlib/Test/#Test.@inferred
+    # @test catches the Error if one is thrown. 
+    # If no error is thrown, @inferred returns what the function return and @test compares the returned value to the type we expected
+    @test @inferred(serialize_to_json_string(ct)) isa String
+    @test @inferred(serialize_to_json_string(cc)) isa String
+    @test @inferred(serialize_to_json_string(public_key.public_key)) isa String
+    @test @inferred(serialize_to_json_string(private_key.private_key)) isa String
+
+    @test @inferred(deserialize_from_json_string(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, json)) isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
+    @test @inferred(deserialize_from_json_string(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, serialize_to_json_string(cc))) isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
+    @test @inferred(deserialize_from_json_string(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, serialize_to_json_string(public_key.public_key))) isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
+    @test @inferred(deserialize_from_json_string(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, serialize_to_json_string(private_key.private_key))) isa OpenFHE.PrivateKey{OpenFHE.DCRTPoly}
+
+    mktempdir() do dir
+        cc_file = joinpath(dir, "cc.bin")
+        pk_file = joinpath(dir, "pk.bin")
+        sk_file = joinpath(dir, "sk.bin")
+        ct_file = joinpath(dir, "ct.bin")
+
+
+
+        @test @inferred(serialize_to_binary_file(ct_file, ct)) isa Bool
+        @test @inferred(serialize_to_binary_file(cc_file, cc)) isa Bool
+        @test @inferred(serialize_to_binary_file(pk_file, public_key.public_key)) isa Bool
+        @test @inferred(serialize_to_binary_file(sk_file, private_key.private_key)) isa Bool
+
+        @test @inferred(deserialize_from_binary_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, ct_file)) isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_binary_file(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, cc_file)) isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_binary_file(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, pk_file)) isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_binary_file(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, sk_file)) isa OpenFHE.PrivateKey{OpenFHE.DCRTPoly}
+
+
+        
+        cc_file = joinpath(dir, "cc.json")
+        pk_file = joinpath(dir, "pk.json")
+        sk_file = joinpath(dir, "sk.json")
+        ct_file = joinpath(dir, "ct.json")
+
+        @test @inferred(serialize_to_json_file(ct_file, ct)) isa Bool
+        @test @inferred(serialize_to_json_file(cc_file, cc)) isa Bool
+        @test @inferred(serialize_to_json_file(pk_file, public_key.public_key)) isa Bool
+        @test @inferred(serialize_to_json_file(sk_file, private_key.private_key)) isa Bool
+
+        @test @inferred(deserialize_from_json_file(OpenFHE.Ciphertext{OpenFHE.DCRTPoly}, ct_file)) isa OpenFHE.Ciphertext{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_json_file(OpenFHE.CryptoContext{OpenFHE.DCRTPoly}, cc_file)) isa OpenFHE.CryptoContext{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_json_file(OpenFHE.PublicKey{OpenFHE.DCRTPoly}, pk_file)) isa OpenFHE.PublicKey{OpenFHE.DCRTPoly}
+        @test @inferred(deserialize_from_json_file(OpenFHE.PrivateKey{OpenFHE.DCRTPoly}, sk_file)) isa OpenFHE.PrivateKey{OpenFHE.DCRTPoly}
+    end
+end
+
 release_context_memory()
 GC.gc()
 
