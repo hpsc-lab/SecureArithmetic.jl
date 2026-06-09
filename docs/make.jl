@@ -66,8 +66,10 @@ makedocs(
 )
 
 
-deploydocs(;
-    repo = "github.com/hpsc-lab/SecureArithmetic.jl",
-    devbranch = "main",
-    push_preview = true
-)
+if get(ENV, "GITHUB_ACTOR", "") != "dependabot[bot]"
+    deploydocs(;
+        repo = "github.com/hpsc-lab/SecureArithmetic.jl",
+        devbranch = "main",
+        push_preview = true
+    )
+end
