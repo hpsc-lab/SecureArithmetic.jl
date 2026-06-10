@@ -763,11 +763,12 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     shape = Serialization.deserialize(s)
     cap = Serialization.deserialize(s)
     n = Serialization.deserialize(s)
-    cts = map(1:n) do _
+    cts = OpenFHE.Ciphertext{OpenFHE.DCRTPoly}[]
+    for _ in 1:n
         json = Serialization.deserialize(s)
         ct = OpenFHE.Ciphertext{OpenFHE.DCRTPoly}()
         OpenFHE.DeserializeFromString(ct, json)
-        ct
+        push!(cts, ct)
     end
     SecureArray(cts, shape, cap, ctx)
 end
