@@ -45,6 +45,7 @@ function decrypt(secure_array::SecureArray, private_key::PrivateKey)
     decrypt_impl(secure_array, private_key)
 end
 
+
 """
     release_context_memory()
 

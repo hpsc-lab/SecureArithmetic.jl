@@ -1,6 +1,7 @@
 module SecureArithmetic
 
 using OpenFHE: OpenFHE
+using Serialization: Serialization
 
 # Basic types
 export SecureContext, SecureVector, PlainVector, PlainMatrix, SecureMatrix,
