@@ -714,15 +714,10 @@ end
 #     (see https://github.com/JuliaLang/julia/blob/329f9b72cb47148f3aa156eeb91d9f72fd7c8c88/stdlib/Serialization/src/Serialization.jl#L900-L901),
 #     so serialized data may not be readable after a Julia upgrade. We may switch to a more
 #     robust approach to serialization in the future.
-const _SERIALIZATION_EXPERIMENTAL_WARNING = """
-SecureArithmetic.jl serialization support is experimental and may change or be removed \
-in a future release. Julia's built-in Serialization format is not necessarily stable across Julia \
-versions — serialized data may not be readable after a Julia upgrade."""
 ############################################################################################
 
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  ctx::SecureContext{<:OpenFHEBackend})
-    @warn _SERIALIZATION_EXPERIMENTAL_WARNING maxlog=1
     Serialization.serialize_type(s, typeof(ctx))
     Serialization.serialize(s, String(OpenFHE.SerializeToString(get_crypto_context(ctx))))
 end
@@ -737,7 +732,6 @@ end
 
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  key::PublicKey{<:OpenFHEBackend})
-    @warn _SERIALIZATION_EXPERIMENTAL_WARNING maxlog=1
     Serialization.serialize_type(s, typeof(key))
     Serialization.serialize(s, key.context)
     Serialization.serialize(s, String(OpenFHE.SerializeToString(key.public_key)))
@@ -753,8 +747,7 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
 end
 
 function Serialization.serialize(s::Serialization.AbstractSerializer,
-                                 key::PrivateKey{<:OpenFHEBackend})
-    @warn _SERIALIZATION_EXPERIMENTAL_WARNING maxlog=1
+                                 key::PrivateKey{<:OpenFHEBackend})u
     Serialization.serialize_type(s, typeof(key))
     Serialization.serialize(s, key.context)
     Serialization.serialize(s, String(OpenFHE.SerializeToString(key.private_key)))
@@ -771,7 +764,6 @@ end
 
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  sa::SecureArray{<:OpenFHEBackend})
-    @warn _SERIALIZATION_EXPERIMENTAL_WARNING maxlog=1
     Serialization.serialize_type(s, typeof(sa))
     Serialization.serialize(s, sa.context)
     Serialization.serialize(s, sa.shape)
