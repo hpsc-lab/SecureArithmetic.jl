@@ -707,21 +707,44 @@ end
 # stream. Deserialize does the reverse — deserializes into JSON strings and reconstructs the C++
 # object via `OpenFHE.DeserializeFromString`. Compound types (keys, arrays) serialize their
 # components in field order so the deserializer can read them back in the same sequence.
-#
-# !!! warning "Experimental"
-#     This serialization interface is experimental and may change or be removed in future
-#     versions. Julia's `Serialization` format is not stable across Julia versions 
-#     (see https://github.com/JuliaLang/julia/blob/329f9b72cb47148f3aa156eeb91d9f72fd7c8c88/stdlib/Serialization/src/Serialization.jl#L900-L901),
-#     so serialized data may not be readable after a Julia upgrade. We may switch to a more
-#     robust approach to serialization in the future.
 ############################################################################################
 
+"""
+    Serialization.serialize(s::Serialization.AbstractSerializer,
+                            ctx::SecureContext{<:OpenFHEBackend})
+
+Serialize a [`SecureContext`](@ref). The underlying
+`OpenFHE.CryptoContext` is converted to a JSON string via `OpenFHE.SerializeToString` and
+written into the Julia serialization stream.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  ctx::SecureContext{<:OpenFHEBackend})
     Serialization.serialize_type(s, typeof(ctx))
     Serialization.serialize(s, String(OpenFHE.SerializeToString(get_crypto_context(ctx))))
 end
 
+"""
+    Serialization.deserialize(s::Serialization.AbstractSerializer,
+                              ::Type{<:SecureContext{<:OpenFHEBackend}})
+
+Deserialize a [`SecureContext`](@ref). 
+Reads a JSON string from the stream and reconstructs the `OpenFHE.CryptoContext` via
+`OpenFHE.DeserializeFromString`.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.deserialize(s::Serialization.AbstractSerializer,
                                    ::Type{T}) where {T <: SecureContext{<:OpenFHEBackend}}
     json = Serialization.deserialize(s)
@@ -730,6 +753,20 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     SecureContext(OpenFHEBackend(cc))
 end
 
+"""
+    Serialization.serialize(s::Serialization.AbstractSerializer,
+                            key::PublicKey{<:OpenFHEBackend})
+
+Serialize a [`PublicKey`](@ref). 
+The associated [`SecureContext`](@ref) is serialized first, followed by the JSON-encoded public key.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`PublicKey`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  key::PublicKey{<:OpenFHEBackend})
     Serialization.serialize_type(s, typeof(key))
@@ -737,6 +774,20 @@ function Serialization.serialize(s::Serialization.AbstractSerializer,
     Serialization.serialize(s, String(OpenFHE.SerializeToString(key.public_key)))
 end
 
+"""
+    Serialization.deserialize(s::Serialization.AbstractSerializer,
+                              ::Type{<:PublicKey{<:OpenFHEBackend}})
+
+Deserialize a [`PublicKey`](@ref). 
+Reads the [`SecureContext`](@ref) followed by the JSON-encoded public key from the stream.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`PublicKey`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.deserialize(s::Serialization.AbstractSerializer,
                                    ::Type{T}) where {T <: PublicKey{<:OpenFHEBackend}}
     ctx = Serialization.deserialize(s)
@@ -746,13 +797,41 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     PublicKey(ctx, pk)
 end
 
+"""
+    Serialization.serialize(s::Serialization.AbstractSerializer,
+                            key::PrivateKey{<:OpenFHEBackend})
+
+Serialize a [`PrivateKey`](@ref).
+The associated [`SecureContext`](@ref) is serialized first, followed by the JSON-encoded private key.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`PrivateKey`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.serialize(s::Serialization.AbstractSerializer,
-                                 key::PrivateKey{<:OpenFHEBackend})u
+                                 key::PrivateKey{<:OpenFHEBackend})
     Serialization.serialize_type(s, typeof(key))
     Serialization.serialize(s, key.context)
     Serialization.serialize(s, String(OpenFHE.SerializeToString(key.private_key)))
 end
 
+"""
+    Serialization.deserialize(s::Serialization.AbstractSerializer,
+                              ::Type{<:PrivateKey{<:OpenFHEBackend}})
+
+Deserialize a [`PrivateKey`](@ref).
+Reads the [`SecureContext`](@ref) followed by the JSON-encoded private key from the stream.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`PrivateKey`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.deserialize(s::Serialization.AbstractSerializer,
                                    ::Type{T}) where {T <: PrivateKey{<:OpenFHEBackend}}
     ctx = Serialization.deserialize(s)
@@ -762,6 +841,21 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     PrivateKey(ctx, sk)
 end
 
+"""
+    Serialization.serialize(s::Serialization.AbstractSerializer,
+                            sa::SecureArray{<:OpenFHEBackend})
+
+Serialize a [`SecureArray`](@ref).
+The associated [`SecureContext`](@ref), array shape, capacity, and each ciphertext (as JSON strings) are
+written into the stream in order.
+
+!!! warning "Experimental"
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`SecureArray`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  sa::SecureArray{<:OpenFHEBackend})
     Serialization.serialize_type(s, typeof(sa))
@@ -774,6 +868,21 @@ function Serialization.serialize(s::Serialization.AbstractSerializer,
     end
 end
 
+"""
+    Serialization.deserialize(s::Serialization.AbstractSerializer,
+                              ::Type{<:SecureArray{<:OpenFHEBackend}})
+
+Deserialize a [`SecureArray`](@ref).
+Reads the [`SecureContext`](@ref), array shape, capacity, and each JSON-encoded ciphertext from the
+stream, then reconstructs the [`SecureArray`](@ref).
+
+!!! warning "Experimental"/
+    This serialization interface is experimental and may change or be removed in
+    non-breaking releases. Julia's `Serialization` format is not stable across Julia
+    versions, so serialized data may not be readable after a Julia upgrade.
+
+See also: [`SecureArray`](@ref), [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
+"""
 function Serialization.deserialize(s::Serialization.AbstractSerializer,
                                    ::Type{T}) where {T <: SecureArray{<:OpenFHEBackend}}
     ctx = Serialization.deserialize(s)
