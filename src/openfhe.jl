@@ -889,7 +889,14 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     shape = Serialization.deserialize(s)
     cap = Serialization.deserialize(s)
     n = Serialization.deserialize(s)
-    cts = OpenFHE.Ciphertext{OpenFHE.DCRTPoly}[]
+    # Recover the element type of the `data` field from the serialized type `T`.
+    # `fieldtype(T, :data)` returns the type of the `data` field (the ciphertext vector),
+    # and `eltype(...)` extracts that vector's element type.
+    # Hardcoding a concrete element type (OpenFHE.Ciphertext{OpenFHE.DCRTPoly}) would cause a TypeError when the deserialized
+    # SecureArray is placed inside a container (e.g. a NamedTuple) whose stored field
+    # types must match exactly.
+    ciphertext_type = eltype(fieldtype(T, :data))
+    cts = ciphertext_type[]
     for _ in 1:n
         json = Serialization.deserialize(s)
         ct = OpenFHE.Ciphertext{OpenFHE.DCRTPoly}()
