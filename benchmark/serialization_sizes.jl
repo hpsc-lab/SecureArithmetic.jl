@@ -3,7 +3,7 @@ using Serialization
 using OpenFHE
 using Printf
 
-function format_bytes(n)
+function format_bytes(n::Integer)
     if n >= 1_000_000
         return @sprintf("%.2f MB", n / 1_000_000)
     elseif n >= 1_000
