@@ -68,7 +68,7 @@ jobs:
           OMP_NUM_THREADS: 1
       - uses: julia-actions/julia-processcoverage@v1
         with:
-          directories: src,examples
+          directories: src,examples,benchmark
       - uses: codecov/codecov-action@v6
         with:
           files: lcov.info

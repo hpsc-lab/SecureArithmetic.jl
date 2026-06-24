@@ -4,5 +4,6 @@ using Test
     include("test_unit.jl")
     include("test_serialization.jl")
     include("test_examples.jl")
+    include("test_benchmarks.jl")
 end
 
