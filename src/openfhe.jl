@@ -876,7 +876,7 @@ Deserialize a [`SecureArray`](@ref).
 Reads the [`SecureContext`](@ref), array shape, capacity, and each JSON-encoded ciphertext from the
 stream, then reconstructs the [`SecureArray`](@ref).
 
-!!! warning "Experimental"/
+!!! warning "Experimental"
     This serialization interface is experimental and may change or be removed in
     non-breaking releases. Julia's `Serialization` format is not stable across Julia
     versions, so serialized data may not be readable after a Julia upgrade.
