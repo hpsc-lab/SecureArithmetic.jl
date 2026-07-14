@@ -764,11 +764,7 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     if !isempty(eval_auto_data)
         OpenFHE.DeserializeEvalAutomorphismKeyFromString(eval_auto_data)
     end
-    try
-        OpenFHE.EvalBootstrapPrecompute(cc)
-    catch
-        # Context was not set up for bootstrapping — no precomputation needed
-    end
+    OpenFHE.EvalBootstrapPrecompute(cc)
     SecureContext(OpenFHEBackend(cc))
 end
 
