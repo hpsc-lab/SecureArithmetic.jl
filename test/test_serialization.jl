@@ -144,7 +144,7 @@ end
     # Clear eval keys from the global cache so they only exist in the serialized data
     ClearEvalMultKeys()
     ClearEvalAutomorphismKeys()
-    ReleaseAllContexts() # simulate separate processes by releaseing all contexts before deserialization
+    ReleaseAllContexts() # simulate separate processes by releasing all contexts before deserialization
 
     # Deserialize — eval mult keys should be restored from the serialized context
     # No need to deserialize the context explicitly. 
