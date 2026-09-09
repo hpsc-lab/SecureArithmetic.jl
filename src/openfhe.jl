@@ -715,7 +715,9 @@ end
 
 Serialize a [`SecureContext`](@ref). The underlying
 `OpenFHE.CryptoContext` is converted to a JSON string via `OpenFHE.SerializeToString` and
-written into the Julia serialization stream.
+written into the Julia serialization stream,
+followed by any eval keys  (multiplication and automorphism/rotation) present in the 
+OpenFHE key cache for this context.
 
 !!! warning "Experimental"
     This serialization interface is experimental and may change or be removed in
@@ -727,7 +729,10 @@ See also: [`SecureContext`](@ref), [`OpenFHEBackend`](@ref)
 function Serialization.serialize(s::Serialization.AbstractSerializer,
                                  ctx::SecureContext{<:OpenFHEBackend})
     Serialization.serialize_type(s, typeof(ctx))
-    Serialization.serialize(s, String(OpenFHE.SerializeToString(get_crypto_context(ctx))))
+    cc = get_crypto_context(ctx)
+    Serialization.serialize(s, String(OpenFHE.SerializeToString(cc)))
+    Serialization.serialize(s, String(OpenFHE.SerializeEvalMultKeyToString(cc)))
+    Serialization.serialize(s, String(OpenFHE.SerializeEvalAutomorphismKeyToString(cc)))
 end
 
 """
@@ -736,7 +741,8 @@ end
 
 Deserialize a [`SecureContext`](@ref). 
 Reads a JSON string from the stream and reconstructs the `OpenFHE.CryptoContext` via
-`OpenFHE.DeserializeFromString`.
+`OpenFHE.DeserializeFromString`. Any serialized eval keys (multiplication and
+automorphism/rotation) are loaded into the OpenFHE key cache.
 
 !!! warning "Experimental"
     This serialization interface is experimental and may change or be removed in
@@ -750,6 +756,15 @@ function Serialization.deserialize(s::Serialization.AbstractSerializer,
     json = Serialization.deserialize(s)
     cc = OpenFHE.CryptoContext{OpenFHE.DCRTPoly}()
     OpenFHE.DeserializeFromString(cc, json)
+    eval_mult_json = Serialization.deserialize(s)
+    if !isempty(eval_mult_json)
+        OpenFHE.DeserializeEvalMultKeyFromString(eval_mult_json)
+    end
+    eval_auto_data = Serialization.deserialize(s)
+    if !isempty(eval_auto_data)
+        OpenFHE.DeserializeEvalAutomorphismKeyFromString(eval_auto_data)
+    end
+    OpenFHE.EvalBootstrapPrecompute(cc)
     SecureContext(OpenFHEBackend(cc))
 end
 
