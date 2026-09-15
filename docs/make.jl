@@ -44,6 +44,9 @@ open(joinpath(@__DIR__, "src", "license.md"), "w") do io
     end
 end
 
+using Preferences: set_preferences!
+certdir = mktempdir(cleanup=false)
+set_preferences!("ObliviousOffload", "cert_dir" => certdir, "trusted_ca_path" => joinpath(certdir, "ca.pem"); force=true)
 # Make documentation
 makedocs(
     # Specify modules for which docstrings should be shown

@@ -10,5 +10,152 @@ this client–server workflow on top of SecureArithmetic.jl. It handles TLS-secu
 transport, serialization of SecureArithmetic objects, and a simple
 `register_service!` / `offload` API.
 
-For an example of how to use ObliviousOffload.jl, see the provided [simple array operations example](https://github.com/hpsc-lab/ObliviousOffload.jl/tree/main/examples/simple_array_operations) and the
+The basic layout for offloading computations using SecureArithmetic entails a client and a server side. The server will be a julia program running in the background and waiting for connections. The client will be a julia programm which can connect to that server to offload particular tasks and fetch the result.
+
+```@meta
+DocTestSetup = quote
+    using OpenFHE
+    using SecureArithmetic
+    using ObliviousOffload
+    function get_context()
+        parameters = CCParams{CryptoContextCKKSRNS}()
+
+        secret_key_distribution = UNIFORM_TERNARY
+        SetSecretKeyDist(parameters, secret_key_distribution)
+
+        SetSecurityLevel(parameters, HEStd_NotSet)
+        SetRingDim(parameters, 1 << 5)
+
+        rescale_technique = FLEXIBLEAUTO
+        dcrt_bits = 59
+        first_modulus = 60
+
+        SetScalingModSize(parameters, dcrt_bits)
+        SetScalingTechnique(parameters, rescale_technique)
+        SetFirstModSize(parameters, first_modulus)
+
+        level_budget = [4, 4]
+
+        levels_available_after_bootstrap = 10
+        depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
+        SetMultiplicativeDepth(parameters, depth)
+
+        cc = GenCryptoContext(parameters)
+
+        Enable(cc, PKE)
+        Enable(cc, KEYSWITCH)
+        Enable(cc, LEVELEDSHE)
+        Enable(cc, ADVANCEDSHE)
+        Enable(cc, FHE)
+
+        ring_dimension = GetRingDimension(cc)
+        # This is the maximum number of slots that can be used for full packing.
+        num_slots = div(ring_dimension,  2)
+
+        EvalBootstrapSetup(cc; level_budget)
+
+        return context = SecureContext(OpenFHEBackend(cc))
+    end
+end
+```
+
+
+Say you have the following stand-alone Secure Arithmetic code which (given a secure context) adds two vectors component wise.
+```jldoctest OblOffl-example-all
+using SecureArithmetic
+context = get_context()
+public_key, private_key = generate_keys(context)
+
+x = [1,2,3]
+y = [4,5,6]
+
+s_x = encrypt(PlainArray(x, context), public_key)
+s_y = encrypt(PlainArray(y, context), public_key)
+
+function add(a, b)
+    return a + b
+end
+
+s_result = add(s_x, s_y)
+result = collect(decrypt(s_result, private_key))
+
+round.(result)
+
+# output
+
+3-element Vector{Float64}:
+ 5.0
+ 7.0
+ 9.0
+```
+
+Now we want to split this into a server side and a client side part. We prepare the required data as before.
+
+```jldoctest OblOffl-example; output = false
+using SecureArithmetic
+using ObliviousOffload
+
+context = get_context()
+public_key, private_key = generate_keys(context)
+
+x = [1,2,3]
+y = [4,5,6]
+ 
+s_x = encrypt(PlainArray(x, context), public_key)
+s_y = encrypt(PlainArray(y, context), public_key)
+
+# output
+
+SecureVector{OpenFHEBackend{CxxWrap.StdLib.SharedPtrAllocated{OpenFHE.CryptoContextImpl{DCRTPoly}}}, Vector{CxxWrap.StdLib.SharedPtr{OpenFHE.CiphertextImpl{T}} where T}}(CxxWrap.StdLib.SharedPtr{OpenFHE.CiphertextImpl{T}} where T[Ciphertext{DCRTPoly}()], (3,), 16, )
+```
+
+Then, on the server side we define the function that should be offloaded, register it with the server.
+
+```jldoctest OblOffl-example
+using SecureArithmetic
+using ObliviousOffload
+function add(a, b)
+    return a + b
+end
+
+conn = ConnectParams()
+server = OffloadServer(conn)
+
+register_service!(server, "add", add)
+
+# output
+
+-----
+-----
+Certificate request self-signature ok
+subject=CN=localhost
+[ Info: ObliviousOffload server listening on 0.0.0.0:8080 (TLS), certificate for 'localhost'
+
+```
+
+Upon the first startup, the server will generally generate a certificate which it will use to communicate with the client securely.
+This certificate has to be accepted once on the client side, to establish the server as a trusted peer.
+To perform this procedure, run server.jl and client.jl from the [handshake example](https://github.com/hpsc-lab/ObliviousOffload.jl/tree/main/examples/handshake).
+
+
+Once the handshake is complete and thus the trusted certificate in place, we can offload the computation to the server and receive the result back.
+```jldoctest OblOffl-example; filter = r".*POST /add.*"
+conn = ConnectParams()
+
+s_result = offload(conn, "add", s_x, s_y)
+result = collect(decrypt(s_result, private_key))
+
+round.(result)
+
+# output
+
+15/Sep/2026:10:05:28] "POST /add HTTP/1.1.0" 200 2.441s
+3-element Vector{Float64}:
+ 5.0
+ 7.0
+ 9.0
+
+```
+
+For another practical example of how to use ObliviousOffload.jl, see the provided [simple array operations example](https://github.com/hpsc-lab/ObliviousOffload.jl/tree/main/examples/simple_array_operations) and the
 [ObliviousOffload.jl documentation](https://hpsc-lab.github.io/ObliviousOffload.jl/stable).
