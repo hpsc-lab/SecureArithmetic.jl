@@ -81,7 +81,7 @@ Computes the running sums r such that ``r[i] = \\sum_{k=0}^i v[k] \\tex{for} \\i
 See also: [Halevi, S., & Shoup, V. (2014). Algorithms in HElib](https://eprint.iacr.org/2014/106)
 """
 
-function running_sums(v::SecureArray{<:OpenFHEBackend})
+function running_sums(v::SecureArray)
     n = length(v)
     w = v
     e = 1
@@ -99,7 +99,7 @@ Computes the total sums t such that ``t[i] = \\sum_{k=0}^{n-1} v[k] \\tex{for} \
 
 See also: [Halevi, S., & Shoup, V. (2014). Algorithms in HElib](https://eprint.iacr.org/2014/106)
 """
-function total_sums(v::SecureArray{<:OpenFHEBackend})
+function total_sums(v::SecureArray)
     n = length(v)
     w = v
     e = 1
@@ -125,7 +125,7 @@ Depth: O(log n) additions, rotations, and masking.
 
 See also: [`total_sums`](@ref)
 """
-function full_replication(v::SecureArray{<:OpenFHEBackend})
+function full_replication(v::SecureArray)
     n = length(v)
     h = log(2, n)
     l = Int(floor(h)) # 2^l shall be the largest power of 2 not exceeding n
@@ -147,7 +147,7 @@ function full_replication(v::SecureArray{<:OpenFHEBackend})
     end
 end
 
-function recursive_replicate(w::SecureArray{<:OpenFHEBackend}, h)
+function recursive_replicate(w::SecureArray, h)
     n = length(w)
     if h == 0
         return [w]
