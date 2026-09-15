@@ -113,3 +113,51 @@ function total_sums(v::SecureArray{<:OpenFHEBackend})
     end
     return w
 end
+
+"""
+    full_replication(v::SecureArray{<:OpenFHEBackend})
+
+Replicates a single entry across the entire array. 
+This procedure uses multiplicative masking to extract the entry, then total-sums to replicate it across the vector.
+
+Running time:  O(n) additions, rotations, and multiplicative masking
+Depth: O(log n) additions, rotations, and masking.
+
+See also: [`total_sums`](@ref)
+"""
+function full_replication(v::SecureArray{<:OpenFHEBackend})
+    n = length(v)
+    h = log(2, n)
+    l = Int(floor(h)) # 2^l shall be the largest power of 2 not exceeding n
+    # TODO: Implement Section 4.2.2 A Shallower Full Replication Procedure in order to save on masking depth (O(log log n) instead of O(log n))
+    if l == h
+        return recursive_replicate(v, l)
+    else
+        # construct v1 such that it equals v in the first 2^l positions and is 0 everywhere else, 
+        mask = PlainArray(vcat(ones(2^l), zeros(n-2^l)), v.context)
+        v1 = v * mask
+        
+        # and v2 such that it equals v in the last n − 2^l positions and is 0 everywhere else, i.e. v1+v2=v --> v2 = v-v1
+        v2 = v-v1
+
+        # recursive_replicate(v1, l) gives us vectors w_0, ... , w_{2^l−1}, where w_i is v[i] in the first 2^l positions, and 0 everywhere else
+        # recursive_replicate(v2 >>> -2^l, l) gives us vectors w_0, ... , w_{2^l-1}. 
+        # We only care for the first n-2^l vectors, where w_i is v[i+2^l] in the first 2^l positions, and 0 everywhere else
+        return [w + ((w*mask) >> 2^l) for w in vcat(recursive_replicate(v1, l), recursive_replicate(v2 >>> -2^l, l)[1:n-2^l])]
+    end
+end
+
+function recursive_replicate(w::SecureArray{<:OpenFHEBackend}, h)
+    n = length(w)
+    if h == 0
+        return [w]
+    end
+    
+   mask = [(i-1) >> (h - 1) & 1 for i in 1:n]
+   w1 = w * PlainArray(mask, w.context)
+   w0 = w-w1
+   wL = w0 + (w0 >>> 2^(h-1))
+   wR = w1 + (w1 >>> -2^(h-1))
+
+   return vcat(recursive_replicate(wL, h-1), recursive_replicate(wR, h-1))
+end

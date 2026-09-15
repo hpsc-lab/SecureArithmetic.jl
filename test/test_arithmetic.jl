@@ -103,7 +103,30 @@ end
     @test collect(decrypt(total_sums(sv), private_key)) ≈ [15,15,15,15,15]
 end
 
+@testset verbose=true showtiming=true "full_replication" begin
+    @testset verbose=true showtiming=true "length 4" begin
+        (context, public_key, private_key) = make_context()
+        
+        v = [1,2,3,4]
+        init_rotation!(context, private_key, (4), 1,2,3,4)
 
+        pv = PlainVector(v, context)
+        sv = encrypt(pv, public_key)
+
+        @test [collect(decrypt(v, private_key)) for v in full_replication(sv)] ≈ [[1,1,1,1],[2,2,2,2],[3,3,3,3],[4,4,4,4]]
+
+    end
+    @testset verbose=true showtiming=true "length 5" begin
+        (context, public_key, private_key) = make_context()
+        v = [1,2,3,4,5]
+        init_rotation!(context, private_key, (5), 1,2,3,4,5)
+
+        pv = PlainVector(v, context)
+        sv = encrypt(pv, public_key)
+
+        @test [collect(decrypt(v, private_key)) for v in full_replication(sv)] ≈ [[1,1,1,1,1],[2,2,2,2,2],[3,3,3,3,3],[4,4,4,4,4],[5,5,5,5,5]]
+    end
+end
 release_context_memory()
 GC.gc()
 
