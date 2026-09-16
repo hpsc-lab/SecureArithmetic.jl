@@ -6,6 +6,6 @@ Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
 [compat]
 OpenFHE = "0.1.14, 0.2"
-Printf = "1"
-Test = "1"
-Serialization = "1"
+Printf = "1, < 0.0.1"
+Test = "1, < 0.0.1"
+Serialization = "1, < 0.0.1"
