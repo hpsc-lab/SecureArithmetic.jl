@@ -26,6 +26,9 @@ export release_context_memory
 # Multithreading
 export enable_multithreading, disable_multithreading
 
+export eoshift
+export running_sums, total_sums, full_replication
+
 include("types.jl")
 include("operations.jl")
 include("auxiliary.jl")
