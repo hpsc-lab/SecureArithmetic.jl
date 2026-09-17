@@ -1,6 +1,45 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Remote Computation · SecureArithmetic.jl</title><meta name="title" content="Remote Computation · SecureArithmetic.jl"/><meta property="og:title" content="Remote Computation · SecureArithmetic.jl"/><meta property="twitter:title" content="Remote Computation · SecureArithmetic.jl"/><meta name="description" content="Documentation for SecureArithmetic.jl."/><meta property="og:description" content="Documentation for SecureArithmetic.jl."/><meta property="twitter:description" content="Documentation for SecureArithmetic.jl."/><meta property="og:url" content="https://hpsc-lab.github.io/SecureArithmetic.jl/stable/tutorials/remote-computation/"/><meta property="twitter:url" content="https://hpsc-lab.github.io/SecureArithmetic.jl/stable/tutorials/remote-computation/"/><link rel="canonical" href="https://hpsc-lab.github.io/SecureArithmetic.jl/stable/tutorials/remote-computation/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">SecureArithmetic.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Remote Computation</a></li></ul></li><li><a class="tocitem" href="../../reference/">API reference</a></li><li><a class="tocitem" href="../../license/">License</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Remote Computation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Remote Computation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/hpsc-lab/SecureArithmetic.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/hpsc-lab/SecureArithmetic.jl/blob/main/docs/src/tutorials/remote-computation.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Remote-Computation-with-ObliviousOffload.jl"><a class="docs-heading-anchor" href="#Remote-Computation-with-ObliviousOffload.jl">Remote Computation with ObliviousOffload.jl</a><a id="Remote-Computation-with-ObliviousOffload.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Remote-Computation-with-ObliviousOffload.jl" title="Permalink"></a></h1><p>Homomorphic encryption is perfectly suited to process sensitive data on a remote server without exposing the underlying plaintext. A client encrypts its data locally, sends the ciphertext and public key to the server, and the server performs computations entirely on encrypted data before returning the encrypted result. The client can then decrypt the result with its private key.</p><p><a href="https://github.com/hpsc-lab/ObliviousOffload.jl">ObliviousOffload.jl</a> provides exactly this client–server workflow on top of SecureArithmetic.jl. It handles TLS-secured HTTP transport, serialization of SecureArithmetic objects, and a simple <code>register_service!</code> / <code>offload</code> API.</p><p>The basic layout for offloading computations using SecureArithmetic entails a client and a server side:</p><ul><li>The server is a Julia program running in the background and waiting for connections. It accepts user data (the &quot;payload&quot;), processes with a predetermined algorithm (the &quot;service&quot;), and returns the result.</li><li>The client is a Julia program that connects to that server, transfers the encrypted payload, selects a service with which the server should process it, and then retrieves the result. That is, the client &quot;offloads&quot; its data processing to the server.</li></ul><p>Say you have the following stand-alone Secure Arithmetic code which (given a secure context) adds two vectors component wise.</p><pre><code class="language-julia hljs">using SecureArithmetic
-context = get_context()
+using OpenFHE
+
+parameters = CCParams{CryptoContextCKKSRNS}()
+
+secret_key_distribution = UNIFORM_TERNARY
+SetSecretKeyDist(parameters, secret_key_distribution)
+
+SetSecurityLevel(parameters, HEStd_NotSet)
+SetRingDim(parameters, 1 &lt;&lt; 5)
+
+rescale_technique = FLEXIBLEAUTO
+dcrt_bits = 59
+first_modulus = 60
+
+SetScalingModSize(parameters, dcrt_bits)
+SetScalingTechnique(parameters, rescale_technique)
+SetFirstModSize(parameters, first_modulus)
+
+level_budget = [4, 4]
+
+levels_available_after_bootstrap = 10
+depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
+SetMultiplicativeDepth(parameters, depth)
+
+cc = GenCryptoContext(parameters)
+
+Enable(cc, PKE)
+Enable(cc, KEYSWITCH)
+Enable(cc, LEVELEDSHE)
+Enable(cc, ADVANCEDSHE)
+Enable(cc, FHE)
+
+ring_dimension = GetRingDimension(cc)
+# This is the maximum number of slots that can be used for full packing.
+num_slots = div(ring_dimension,  2)
+
+EvalBootstrapSetup(cc; level_budget)
+
+context = SecureContext(OpenFHEBackend(cc))
+
 public_key, private_key = generate_keys(context)
 
 x = [1,2,3]
@@ -24,9 +63,47 @@ round.(result)
  5.0
  7.0
  9.0</code></pre><p>Now we want to split this into a server side and a client side part. We start with the client code, where we prepare the required data as before.</p><pre><code class="language-julia hljs">using SecureArithmetic
+using OpenFHE
 using ObliviousOffload
 
-context = get_context()
+parameters = CCParams{CryptoContextCKKSRNS}()
+
+secret_key_distribution = UNIFORM_TERNARY
+SetSecretKeyDist(parameters, secret_key_distribution)
+
+SetSecurityLevel(parameters, HEStd_NotSet)
+SetRingDim(parameters, 1 &lt;&lt; 5)
+
+rescale_technique = FLEXIBLEAUTO
+dcrt_bits = 59
+first_modulus = 60
+
+SetScalingModSize(parameters, dcrt_bits)
+SetScalingTechnique(parameters, rescale_technique)
+SetFirstModSize(parameters, first_modulus)
+
+level_budget = [4, 4]
+
+levels_available_after_bootstrap = 10
+depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
+SetMultiplicativeDepth(parameters, depth)
+
+cc = GenCryptoContext(parameters)
+
+Enable(cc, PKE)
+Enable(cc, KEYSWITCH)
+Enable(cc, LEVELEDSHE)
+Enable(cc, ADVANCEDSHE)
+Enable(cc, FHE)
+
+ring_dimension = GetRingDimension(cc)
+# This is the maximum number of slots that can be used for full packing.
+num_slots = div(ring_dimension,  2)
+
+EvalBootstrapSetup(cc; level_budget)
+
+context = SecureContext(OpenFHEBackend(cc))
+
 public_key, private_key = generate_keys(context)
 
 x = [1,2,3]
@@ -65,4 +142,4 @@ round.(result)
  5.0
  7.0
  9.0
-</code></pre><p>For another practical example of how to use ObliviousOffload.jl, see the provided <a href="https://github.com/hpsc-lab/ObliviousOffload.jl/tree/main/examples/simple_array_operations">simple array operations example</a> and the <a href="https://hpsc-lab.github.io/ObliviousOffload.jl/stable">ObliviousOffload.jl documentation</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../../reference/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Thursday 17 September 2026 12:13">Thursday 17 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><p>For another practical example of how to use ObliviousOffload.jl, see the provided <a href="https://github.com/hpsc-lab/ObliviousOffload.jl/tree/main/examples/simple_array_operations">simple array operations example</a> and the <a href="https://hpsc-lab.github.io/ObliviousOffload.jl/stable">ObliviousOffload.jl documentation</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../../reference/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Thursday 17 September 2026 14:29">Thursday 17 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
