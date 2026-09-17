@@ -14,58 +14,49 @@ The basic layout for offloading computations using SecureArithmetic entails a cl
 * The server is a Julia program running in the background and waiting for connections. It accepts user data (the "payload"), processes with a predetermined algorithm (the "service"), and returns the result.
 * The client is a Julia program that connects to that server, transfers the encrypted payload, selects a service with which the server should process it, and then retrieves the result. That is, the client "offloads" its data processing to the server.
 
-```@meta
-DocTestSetup = quote
-    using OpenFHE
-    using SecureArithmetic
-    using ObliviousOffload
-    function get_context()
-        parameters = CCParams{CryptoContextCKKSRNS}()
-
-        secret_key_distribution = UNIFORM_TERNARY
-        SetSecretKeyDist(parameters, secret_key_distribution)
-
-        SetSecurityLevel(parameters, HEStd_NotSet)
-        SetRingDim(parameters, 1 << 5)
-
-        rescale_technique = FLEXIBLEAUTO
-        dcrt_bits = 59
-        first_modulus = 60
-
-        SetScalingModSize(parameters, dcrt_bits)
-        SetScalingTechnique(parameters, rescale_technique)
-        SetFirstModSize(parameters, first_modulus)
-
-        level_budget = [4, 4]
-
-        levels_available_after_bootstrap = 10
-        depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
-        SetMultiplicativeDepth(parameters, depth)
-
-        cc = GenCryptoContext(parameters)
-
-        Enable(cc, PKE)
-        Enable(cc, KEYSWITCH)
-        Enable(cc, LEVELEDSHE)
-        Enable(cc, ADVANCEDSHE)
-        Enable(cc, FHE)
-
-        ring_dimension = GetRingDimension(cc)
-        # This is the maximum number of slots that can be used for full packing.
-        num_slots = div(ring_dimension,  2)
-
-        EvalBootstrapSetup(cc; level_budget)
-
-        return context = SecureContext(OpenFHEBackend(cc))
-    end
-end
-```
-
-
 Say you have the following stand-alone Secure Arithmetic code which (given a secure context) adds two vectors component wise.
 ```jldoctest OblOffl-example-all
 using SecureArithmetic
-context = get_context()
+using OpenFHE
+
+parameters = CCParams{CryptoContextCKKSRNS}()
+
+secret_key_distribution = UNIFORM_TERNARY
+SetSecretKeyDist(parameters, secret_key_distribution)
+
+SetSecurityLevel(parameters, HEStd_NotSet)
+SetRingDim(parameters, 1 << 5)
+
+rescale_technique = FLEXIBLEAUTO
+dcrt_bits = 59
+first_modulus = 60
+
+SetScalingModSize(parameters, dcrt_bits)
+SetScalingTechnique(parameters, rescale_technique)
+SetFirstModSize(parameters, first_modulus)
+
+level_budget = [4, 4]
+
+levels_available_after_bootstrap = 10
+depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
+SetMultiplicativeDepth(parameters, depth)
+
+cc = GenCryptoContext(parameters)
+
+Enable(cc, PKE)
+Enable(cc, KEYSWITCH)
+Enable(cc, LEVELEDSHE)
+Enable(cc, ADVANCEDSHE)
+Enable(cc, FHE)
+
+ring_dimension = GetRingDimension(cc)
+# This is the maximum number of slots that can be used for full packing.
+num_slots = div(ring_dimension,  2)
+
+EvalBootstrapSetup(cc; level_budget)
+
+context = SecureContext(OpenFHEBackend(cc))
+
 public_key, private_key = generate_keys(context)
 
 x = [1,2,3]
@@ -95,9 +86,47 @@ Now we want to split this into a server side and a client side part. We start wi
 
 ```jldoctest OblOffl-example; output = false
 using SecureArithmetic
+using OpenFHE
 using ObliviousOffload
 
-context = get_context()
+parameters = CCParams{CryptoContextCKKSRNS}()
+
+secret_key_distribution = UNIFORM_TERNARY
+SetSecretKeyDist(parameters, secret_key_distribution)
+
+SetSecurityLevel(parameters, HEStd_NotSet)
+SetRingDim(parameters, 1 << 5)
+
+rescale_technique = FLEXIBLEAUTO
+dcrt_bits = 59
+first_modulus = 60
+
+SetScalingModSize(parameters, dcrt_bits)
+SetScalingTechnique(parameters, rescale_technique)
+SetFirstModSize(parameters, first_modulus)
+
+level_budget = [4, 4]
+
+levels_available_after_bootstrap = 10
+depth = levels_available_after_bootstrap + GetBootstrapDepth(level_budget, secret_key_distribution)
+SetMultiplicativeDepth(parameters, depth)
+
+cc = GenCryptoContext(parameters)
+
+Enable(cc, PKE)
+Enable(cc, KEYSWITCH)
+Enable(cc, LEVELEDSHE)
+Enable(cc, ADVANCEDSHE)
+Enable(cc, FHE)
+
+ring_dimension = GetRingDimension(cc)
+# This is the maximum number of slots that can be used for full packing.
+num_slots = div(ring_dimension,  2)
+
+EvalBootstrapSetup(cc; level_budget)
+
+context = SecureContext(OpenFHEBackend(cc))
+
 public_key, private_key = generate_keys(context)
 
 x = [1,2,3]
