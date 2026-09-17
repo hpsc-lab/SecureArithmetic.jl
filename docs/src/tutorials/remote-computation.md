@@ -111,7 +111,7 @@ s_y = encrypt(PlainArray(y, context), public_key)
 SecureVector{OpenFHEBackend{CxxWrap.StdLib.SharedPtrAllocated{OpenFHE.CryptoContextImpl{DCRTPoly}}}, Vector{CxxWrap.StdLib.SharedPtr{OpenFHE.CiphertextImpl{T}} where T}}(CxxWrap.StdLib.SharedPtr{OpenFHE.CiphertextImpl{T}} where T[Ciphertext{DCRTPoly}()], (3,), 16, )
 ```
 
-Then, on the server side we define the function that should be offloaded, register it with the server.
+For the server, we create a server object with ObliviousOffload.jl. We then define a function that the server should perform with the user data (here called `add`) and then register it as a service that the server provides to the user (again called `"add"`).
 
 ```jldoctest OblOffl-example
 using SecureArithmetic
