@@ -91,7 +91,7 @@ round.(result)
  9.0
 ```
 
-Now we want to split this into a server side and a client side part. We prepare the required data as before.
+Now we want to split this into a server side and a client side part. We start with the client code, where we prepare the required data as before.
 
 ```jldoctest OblOffl-example; output = false
 using SecureArithmetic
