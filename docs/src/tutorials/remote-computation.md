@@ -141,6 +141,7 @@ To perform this procedure, run server.jl and client.jl from the [handshake examp
 
 
 Once the handshake is complete and thus the trusted certificate in place, we can offload the computation to the server and receive the result back.
+We thus execute the following code on the client side.
 ```jldoctest OblOffl-example; filter = r".*POST /add.*"
 conn = ConnectParams()
 
