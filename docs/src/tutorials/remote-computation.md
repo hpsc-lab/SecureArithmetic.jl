@@ -10,7 +10,9 @@ this client–server workflow on top of SecureArithmetic.jl. It handles TLS-secu
 transport, serialization of SecureArithmetic objects, and a simple
 `register_service!` / `offload` API.
 
-The basic layout for offloading computations using SecureArithmetic entails a client and a server side. The server will be a julia program running in the background and waiting for connections. The client will be a julia program which can connect to that server to offload particular tasks and fetch the result.
+The basic layout for offloading computations using SecureArithmetic entails a client and a server side:
+* The server is a Julia program running in the background and waiting for connections. It accepts user data (the "payload"), processes with a predetermined algorithm (the "service"), and returns the result.
+* The client is a Julia program that connects to that server, transfers the encrypted payload, selects a service with which the server should process it, and then retrieves the result. That is, the client "offloads" its data processing to the server.
 
 ```@meta
 DocTestSetup = quote
