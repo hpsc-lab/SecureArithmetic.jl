@@ -15,7 +15,7 @@ The basic layout for offloading computations using SecureArithmetic entails a cl
 * The client is a Julia program that connects to that server, transfers the encrypted payload, selects a service with which the server should process it, and then retrieves the result. That is, the client "offloads" its data processing to the server.
 
 Say you have the following stand-alone Secure Arithmetic code which (given a secure context) adds two vectors component wise.
-```jldoctest OblOffl-example-all
+```jldoctest OblOffl-example-all; filter = [r"(4\.99\d+|5\.0\d*)" => s"5.0", r"(6\.99\d+|7\.0\d*)" => s"7.0", r"(8\.99\d+|9\.0\d*)" => s"9.0"]
 using SecureArithmetic
 using OpenFHE
 
@@ -72,7 +72,7 @@ end
 s_result = add(s_x, s_y)
 result = collect(decrypt(s_result, private_key))
 
-round.(result)
+result
 
 # output
 
@@ -171,13 +171,13 @@ To perform this procedure, run server.jl and client.jl from the [handshake examp
 
 Once the handshake is complete and thus the trusted certificate in place, we can offload the computation to the server and receive the result back.
 We thus execute the following code on the client side.
-```jldoctest OblOffl-example; filter = r".*POST /add.*"
+```jldoctest OblOffl-example; filter = [r".*POST /add.*", r"(4\.99\d+|5\.0\d*)" => s"5.0", r"(6\.99\d+|7\.0\d*)" => s"7.0", r"(8\.99\d+|9\.0\d*)" => s"9.0"]
 conn = ConnectParams()
 
 s_result = offload(conn, "add", s_x, s_y)
 result = collect(decrypt(s_result, private_key))
 
-round.(result)
+result
 
 # output
 
