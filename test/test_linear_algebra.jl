@@ -40,7 +40,7 @@ end
 @testset verbose=true showtiming=true "square_mat_mat_nul" begin
     (context, public_key, private_key) = make_context()
 
-    # SecureArithmetic stores matrices in column order, thus we need to tranpose before eval mult
+    # SecureArithmetic stores matrices in column order, thus we need to transpose before eval mult
     m1 = collect(transpose([0.25 0.5 0.75;
          1.0 2.0 3.0;
          4.0 5.0 6.0]))
