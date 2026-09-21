@@ -32,5 +32,6 @@ include("auxiliary.jl")
 include("openfhe.jl")
 include("unencrypted.jl")
 include("arithmetic.jl")
+include("linear_algebra.jl")
 
 end # module SecureArithmetic
