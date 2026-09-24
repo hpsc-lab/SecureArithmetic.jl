@@ -79,6 +79,10 @@ x1 shifted circularly by -1 = [0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0, 0.25]
 x1 shifted circularly by 2 = [4.0, 5.0, 0.25, 0.5, 0.75, 1.0, 2.0, 3.0]
 ```
 
+### Client-server architectures
+To realize simple client-server architectures with SecureArithmetic.jl, please have a look
+at [ObliviousOffload.jl](https://github.com/hpsc-lab/ObliviousOffload.jl).
+
 ### Memory issues
 OpenFHE is a memory-optimized C++ library, but these optimizations can cause
 memory issues when transitioning to Julia.
