@@ -55,6 +55,7 @@ See also: [`SecureArray`](@ref), [`PlainArray`](@ref), `multiply`
 struct SecureArrayStyle <: Base.Broadcast.BroadcastStyle end
 Base.Broadcast.BroadcastStyle(::Type{<:SecureArray}) = SecureArrayStyle()
 Base.Broadcast.BroadcastStyle(::Type{<:PlainArray}) = SecureArrayStyle()
+# Win over scalars so e.g. `sa .* 2` stays in SecureArrayStyle (compare [SparseArrays.jl/src/higherorderfns.jl](https://github.com/JuliaSparse/SparseArrays.jl/blob/84b5114372a15d05b9a9a160d36f99b9a3d3cea6/src/higherorderfns.jl#L76))
 Base.Broadcast.BroadcastStyle(s::SecureArrayStyle, ::Base.Broadcast.DefaultArrayStyle{0}) = s
 # Prevent the default `broadcastable(x) = collect(x)` from calling `iterate` on ciphertexts.
 Base.Broadcast.broadcastable(sa::SecureArray) = sa
@@ -64,6 +65,8 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(a, b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::PlainArray{B, N}) where {B, N} = multiply(a, b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::PlainArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(b, a)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray, b::Real) = multiply(a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::Real, b::SecureArray) = multiply(b, a)
 
 # Circular shift
 """
