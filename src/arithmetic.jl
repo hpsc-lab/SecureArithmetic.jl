@@ -116,3 +116,11 @@ function Base.circshift(pa::PlainArray, shifts)
     shifted = circshift(data, shifts)
     PlainArray(shifted, pa.context)
 end
+
+
+# Matrix Multiplication
+# For matrices in column-major order, we have to swap the arguments order
+Base.:*(sm1::SecureMatrix{B, N}, sm2::SecureMatrix{B, N}) where {B, N} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+Base.:*(sm1::PlainMatrix{B}, sm2::SecureMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+Base.:*(sm1::SecureMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1) 
+Base.:*(sm1::PlainMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
