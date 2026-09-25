@@ -42,7 +42,7 @@ default fallback (`collect(x)`) would attempt to call `iterate` on them.
 
 ## Example
 
-```jldoctest
+```julia
 sa1 .* sa2       # element-wise multiply (calls `multiply`)
 sa1 * sa2         # matrix multiply for SecureMatrix (calls `row_mat_times_mat`)
 ```
