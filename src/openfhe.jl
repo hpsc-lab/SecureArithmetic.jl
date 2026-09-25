@@ -389,6 +389,11 @@ function add(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend}
     secure_array
 end
 
+function add(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .+ vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
+end
+
 function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -398,6 +403,11 @@ function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function add(pa1::PlainArray{<:OpenFHEBackend}, scalar::Real)
+    data = vec(collect(pa1)) .+ scalar
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
 end
 
 function subtract(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
@@ -433,6 +443,11 @@ function subtract(pa::PlainArray{<:OpenFHEBackend}, sa::SecureArray{<:OpenFHEBac
     secure_array
 end
 
+function subtract(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .- vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
+end
+
 function subtract(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -455,6 +470,16 @@ function subtract(scalar::Real, sa::SecureArray{<:OpenFHEBackend})
     secure_array
 end
 
+function subtract(pa::PlainArray{<:OpenFHEBackend}, scalar::Real)
+    data = vec(collect(pa)) .- scalar
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
+end
+
+function subtract(scalar::Real, pa::PlainArray{<:OpenFHEBackend})
+    data = scalar .- vec(collect(pa)) 
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
+end
+
 function negate(sa::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -464,6 +489,11 @@ function negate(sa::SecureArray{<:OpenFHEBackend})
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function negate(pa::PlainArray{<:OpenFHEBackend})
+    data = -vec(collect(pa)) 
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
 end
 
 function multiply(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
@@ -486,6 +516,11 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBac
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function multiply(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .* vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
 end
 
 function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
