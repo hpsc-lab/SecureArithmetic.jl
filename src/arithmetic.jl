@@ -38,8 +38,8 @@ a lazy `Broadcasted` expression tree and materializes it element-by-element — 
 
 Instead, we eagerly evaluate broadcast expressions by overriding
 [`Base.Broadcast.broadcasted`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcasted)
-for specific operations, returning the computed result
-directly. This is the same approach Julia Base uses for `AbstractRange` operations in
+for specific operations, returning the computed result directly. 
+    This is the same approach Julia Base uses for `AbstractRange` operations in
 [`base/broadcast.jl`](https://github.com/JuliaLang/julia/blob/d1c37793dd2ab0de6bca636e1d7f2ceb43150a9c/base/broadcast.jl#L1176), e.g.,
 `broadcasted(::DefaultArrayStyle{1}, ::typeof(*), x::Number, r::LinRange)`.
 
