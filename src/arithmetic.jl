@@ -28,13 +28,16 @@ Since `SecureArray` and `PlainArray` are not `AbstractArray` subtypes and their 
 a lazy `Broadcasted` expression tree and materializes it element-by-element — cannot be used.
 
 Instead, we eagerly evaluate broadcast expressions by overriding
-[`Base.Broadcast.broadcasted`](@ref) for specific operations, returning the computed result
+[`Base.Broadcast.broadcasted`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcasted)
+for specific operations, returning the computed result
 directly. This is the same approach Julia Base uses for `AbstractRange` operations in
 [`base/broadcast.jl`](https://github.com/JuliaLang/julia/blob/d1c37793dd2ab0de6bca636e1d7f2ceb43150a9c/base/broadcast.jl#L1176), e.g.,
 `broadcasted(::DefaultArrayStyle{1}, ::typeof(*), x::Number, r::LinRange)`.
 
-We also override [`Base.Broadcast.broadcastable`](@ref) to return the objects as-is, since the
-default fallback (`collect(x)`) would attempt to call `iterate` on them.
+We also override
+[`Base.Broadcast.broadcastable`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcastable)
+to return the objects as-is, since the default fallback (`collect(x)`) would attempt to call
+`iterate` on them.
 
 ## Supported broadcast operations
 
@@ -47,7 +50,7 @@ sa1 .* sa2       # element-wise multiply (calls `multiply`)
 sa1 * sa2         # matrix multiply for SecureMatrix (calls `row_mat_times_mat`)
 ```
 
-See also: [`SecureArray`](@ref), [`PlainArray`](@ref), [`multiply`](@ref)
+See also: [`SecureArray`](@ref), [`PlainArray`](@ref), `multiply`
 """
 struct SecureArrayStyle <: Base.Broadcast.BroadcastStyle end
 Base.Broadcast.BroadcastStyle(::Type{<:SecureArray}) = SecureArrayStyle()
