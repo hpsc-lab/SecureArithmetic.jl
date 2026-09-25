@@ -14,12 +14,59 @@ Base.:-(scalar::Real, sa::SecureArray) = subtract(scalar, sa)
 # Negate
 Base.:-(sa::SecureArray) = negate(sa)
 
-# Multiply
-Base.:*(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = multiply(sa1, sa2)
-Base.:*(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = multiply(sa, pa)
-Base.:*(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = multiply(sa, pa)
+# Multiply (scalar)
 Base.:*(sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
+
+"""
+    SecureArrayStyle <: Base.Broadcast.BroadcastStyle
+
+Custom broadcast style for [`SecureArray`](@ref) and [`PlainArray`](@ref).
+
+Since `SecureArray` and `PlainArray` are not `AbstractArray` subtypes and their elements
+(ciphertexts) cannot be iterated individually, the standard broadcast machinery — which builds
+a lazy `Broadcasted` expression tree and materializes it element-by-element — cannot be used.
+
+Instead, we eagerly evaluate broadcast expressions by overriding
+[`Base.Broadcast.broadcasted`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcasted)
+for specific operations, returning the computed result
+directly. This is the same approach Julia Base uses for `AbstractRange` operations in
+[`base/broadcast.jl`](https://github.com/JuliaLang/julia/blob/d1c37793dd2ab0de6bca636e1d7f2ceb43150a9c/base/broadcast.jl#L1176), e.g.,
+`broadcasted(::DefaultArrayStyle{1}, ::typeof(*), x::Number, r::LinRange)`.
+
+We also override
+[`Base.Broadcast.broadcastable`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcastable)
+to return the objects as-is, since the default fallback (`collect(x)`) would attempt to call
+`iterate` on them.
+
+## Supported broadcast operations
+
+- `.*` (element-wise multiply): `sa .* sa`, `sa .* pa`, `pa .* sa`, `pa .* pa`
+
+## Example
+
+```julia
+sa1 .* sa2       # element-wise multiply (calls `multiply`)
+sa1 * sa2         # matrix multiply for SecureMatrix (calls `row_mat_times_mat`)
+```
+
+See also: [`SecureArray`](@ref), [`PlainArray`](@ref), `multiply`
+"""
+struct SecureArrayStyle <: Base.Broadcast.BroadcastStyle end
+Base.Broadcast.BroadcastStyle(::Type{<:SecureArray}) = SecureArrayStyle()
+Base.Broadcast.BroadcastStyle(::Type{<:PlainArray}) = SecureArrayStyle()
+# Win over scalars so e.g. `sa .* 2` stays in SecureArrayStyle (compare [SparseArrays.jl/src/higherorderfns.jl](https://github.com/JuliaSparse/SparseArrays.jl/blob/84b5114372a15d05b9a9a160d36f99b9a3d3cea6/src/higherorderfns.jl#L76))
+Base.Broadcast.BroadcastStyle(s::SecureArrayStyle, ::Base.Broadcast.DefaultArrayStyle{0}) = s
+# Prevent the default `broadcastable(x) = collect(x)` from calling `iterate` on ciphertexts.
+Base.Broadcast.broadcastable(sa::SecureArray) = sa
+Base.Broadcast.broadcastable(pa::PlainArray) = pa
+
+# Element-wise multiply (a .* b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::PlainArray{B, N}) where {B, N} = multiply(a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::PlainArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(b, a)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray, b::Real) = multiply(a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::Real, b::SecureArray) = multiply(b, a)
 
 # Circular shift
 """
