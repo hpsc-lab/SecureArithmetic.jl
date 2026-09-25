@@ -31,7 +31,7 @@ function simple_matrix_operations(context)
 
     sm_scalar = sm1 * 4.0
 
-    sm_mult = sm1 * sm2
+    sm_mult = sm1 .* sm2
 
     sm_shift1 = circshift(sm1, (0, 1))
     sm_shift2 = circshift(sm1, (1, -1))

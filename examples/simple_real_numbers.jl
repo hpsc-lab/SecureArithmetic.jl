@@ -26,7 +26,7 @@ function simple_real_numbers(context)
 
     sv_scalar = sv1 * 4.0
 
-    sv_mult = sv1 * sv2
+    sv_mult = sv1 .* sv2
 
     sv_shift1 = circshift(sv1, -1)
     sv_shift2 = circshift(sv1, 2)

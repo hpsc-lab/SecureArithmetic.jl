@@ -685,10 +685,10 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
     # operate with N-dimensional array in form of 1D
     sv = SecureArray(sa.data, (length(sa),), capacity(sa), sa.context)
     # apply main shift
-    sv_new = circshift(sv * main_mask, main_1d_shift)
+    sv_new = circshift(sv .* main_mask, main_1d_shift)
     # correct positions of elements in each dimension combination
     for i in eachindex(masks)
-        sv_new += circshift(sv * masks[i], masked_1d_shift[i])
+        sv_new += circshift(sv .* masks[i], masked_1d_shift[i])
     end
 
     SecureArray(sv_new.data, size(sa), capacity(sa), sa.context)
