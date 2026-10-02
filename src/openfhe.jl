@@ -257,6 +257,69 @@ function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBacke
     plain_array
 end
 
+"""
+    resize(a::PlainVector{<:OpenFHEBackend}, n::Integer)
+
+Return a `PlainVector` containing `n` elements.
+If `n` is smaller than the current length, the first `n` elements are retained.
+If `n` is larger, the new elements are not guaranteed to be initialized.
+When `n` exceeds the current capacity, new plaintexts are allocated.
+When `n` frees a complete batch, excess plaintexts are dropped.
+
+See also: [`PlainVector`](@ref), [`capacity`](@ref)
+"""
+function resize(a::PlainVector{<:OpenFHEBackend}, n::Integer)
+    cc = get_crypto_context(a.context)
+    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
+    n_plaintexts_needed = ceil(Int, n / batch_size)
+    n_plaintexts_current = length(a.data)
+
+    if n_plaintexts_needed < n_plaintexts_current
+        new_data = a.data[1:n_plaintexts_needed]
+    elseif n_plaintexts_needed > n_plaintexts_current
+        new_data = copy(a.data)
+        for _ in (n_plaintexts_current+1):(n_plaintexts_needed - 1)
+            push!(new_data, OpenFHE.MakeCKKSPackedPlaintext(cc, zeros(batch_size)))
+        end
+        push!(new_data, OpenFHE.MakeCKKSPackedPlaintext(cc, zeros(batch_size)))
+    else
+        return PlainArray(a.data, (n,), a.capacity, a.context)
+    end
+
+    PlainArray(new_data, (n,), n_plaintexts_needed * batch_size, a.context)
+end
+
+"""
+    resize(a::SecureVector{<:OpenFHEBackend}, n::Integer)
+
+Return a `SecureVector` containing `n` elements.
+If `n` is smaller than the current length, the first `n` elements are retained.
+If `n` is larger, the new elements are not guaranteed to be initialized.
+When `n` exceeds the current capacity, new ciphertexts are allocated via `Clone`.
+When `n` frees a complete batch, excess ciphertexts are dropped.
+
+See also: [`SecureVector`](@ref), [`capacity`](@ref)
+"""
+function resize(a::SecureVector{<:OpenFHEBackend}, n::Integer)
+    cc = get_crypto_context(a.context)
+    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
+    n_ciphertexts_needed = ceil(Int, n / batch_size)
+    n_ciphertexts_current = length(a.data)
+
+    if n_ciphertexts_needed < n_ciphertexts_current
+        new_data = a.data[1:n_ciphertexts_needed]
+    elseif n_ciphertexts_needed > n_ciphertexts_current
+        new_data = copy(a.data)
+        for _ in (n_ciphertexts_current+1):n_ciphertexts_needed
+            push!(new_data, OpenFHE.Clone(a.data[1]))
+        end
+    else
+        return SecureArray(a.data, (n,), a.capacity, a.context)
+    end
+
+    SecureArray(new_data, (n,), n_ciphertexts_needed * batch_size, a.context)
+end
+
 function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
     print(io, collect(pa))
 end
@@ -389,6 +452,11 @@ function add(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBackend}
     secure_array
 end
 
+function add(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .+ vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
+end
+
 function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -398,6 +466,11 @@ function add(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function add(pa1::PlainArray{<:OpenFHEBackend}, scalar::Real)
+    data = vec(collect(pa1)) .+ scalar
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
 end
 
 function subtract(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
@@ -433,6 +506,11 @@ function subtract(pa::PlainArray{<:OpenFHEBackend}, sa::SecureArray{<:OpenFHEBac
     secure_array
 end
 
+function subtract(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .- vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
+end
+
 function subtract(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -455,6 +533,16 @@ function subtract(scalar::Real, sa::SecureArray{<:OpenFHEBackend})
     secure_array
 end
 
+function subtract(pa::PlainArray{<:OpenFHEBackend}, scalar::Real)
+    data = vec(collect(pa)) .- scalar
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
+end
+
+function subtract(scalar::Real, pa::PlainArray{<:OpenFHEBackend})
+    data = scalar .- vec(collect(pa)) 
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
+end
+
 function negate(sa::SecureArray{<:OpenFHEBackend})
     cc = get_crypto_context(sa)
     ciphertexts = Vector{OpenFHE.Ciphertext}(undef, length(sa.data))
@@ -464,6 +552,11 @@ function negate(sa::SecureArray{<:OpenFHEBackend})
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function negate(pa::PlainArray{<:OpenFHEBackend})
+    data = -vec(collect(pa)) 
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
 end
 
 function multiply(sa1::SecureArray{<:OpenFHEBackend}, sa2::SecureArray{<:OpenFHEBackend})
@@ -486,6 +579,11 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, pa::PlainArray{<:OpenFHEBac
     secure_array = SecureArray(ciphertexts, size(sa), capacity(sa), sa.context)
 
     secure_array
+end
+
+function multiply(pa1::PlainArray{<:OpenFHEBackend}, pa2::PlainArray{<:OpenFHEBackend})
+    data = vec(collect(pa1)) .* vec(collect(pa2))
+    PlainArray(Vector{Float64}(data), pa1.context, size(pa1))
 end
 
 function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
@@ -685,10 +783,10 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, N}, shift) where N
     # operate with N-dimensional array in form of 1D
     sv = SecureArray(sa.data, (length(sa),), capacity(sa), sa.context)
     # apply main shift
-    sv_new = circshift(sv * main_mask, main_1d_shift)
+    sv_new = circshift(sv .* main_mask, main_1d_shift)
     # correct positions of elements in each dimension combination
     for i in eachindex(masks)
-        sv_new += circshift(sv * masks[i], masked_1d_shift[i])
+        sv_new += circshift(sv .* masks[i], masked_1d_shift[i])
     end
 
     SecureArray(sv_new.data, size(sa), capacity(sa), sa.context)

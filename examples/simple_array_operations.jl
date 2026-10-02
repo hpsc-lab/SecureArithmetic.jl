@@ -26,7 +26,7 @@ function simple_array_operations(context)
 
     sa_scalar = sa1 * 4.0
 
-    sa_mult = sa1 * sa2
+    sa_mult = sa1 .* sa2
 
     sa_shift1 = circshift(sa1, (0, 1, 0))
     sa_shift2 = circshift(sa1, (1, -1, 1))
