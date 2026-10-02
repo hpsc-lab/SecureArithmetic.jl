@@ -231,7 +231,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                     (; n = 8, c = 8, what="no op"), 
                     (; n = 9, c = 16, what="increase size, changing capacity"),
                     (; n = 16, c = 16, what="increase size without changing capacity"),
-                    (; n = 9, c = 16, what="reduce size wihtout changing capacity"), 
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
                     (; n = 7, c = 8, what="reduce size, changing capacity"),
                 )
                     (; n, c, what) = resize_params
@@ -255,7 +255,7 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                     (; n = 8, c = 8, what="no op"), 
                     (; n = 9, c = 16, what="increase size, changing capacity"),
                     (; n = 16, c = 16, what="increase size without changing capacity"),
-                    (; n = 9, c = 16, what="reduce size wihtout changing capacity"), 
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
                     (; n = 7, c = 8, what="reduce size, changing capacity"),
                 )
                     (; n, c, what) = resize_params
