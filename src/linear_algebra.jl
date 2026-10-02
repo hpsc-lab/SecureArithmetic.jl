@@ -10,7 +10,7 @@ See https://eprint.iacr.org/2018/1041.pdf
 """
 function row_mat_times_mat(sm1, sm2) 
     n = length(sm1)
-    d = Int(sqrt(n))
+    d = sm1.shape[1]
     shape = sm1.shape
     ctx = sm1.context
 
