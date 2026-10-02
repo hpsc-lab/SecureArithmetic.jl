@@ -26,11 +26,11 @@ function row_mat_times_mat(sm1, sm2)
 
     for k in -d+1:d-1
         if k >= 0
-            u_k_sigma = PlainArray([0 <= l-d*k && l-d*k < d-k ? 1 : 0 for l in 0:n-1], ctx)
+            u_k_sigma = PlainArray([0 <= i-d*k && i-d*k < d-k ? 1 : 0 for i in 0:n-1], ctx)
         else 
-            u_k_sigma = PlainArray([-k <= l-(d+k)*d && l-(d+k)*d < d ? 1 : 0 for l in 0:n-1], ctx)
+            u_k_sigma = PlainArray([-k <= i-(d+k)*d && i-(d+k)*d < d ? 1 : 0 for i in 0:n-1], ctx)
         end
-        # Note that Rot(ct; l) in the paper is a leftshift, i.e. circshift(ct, -l)
+        # Note that Rot(ct; i) in the paper is a leftshift, i.e. circshift(ct, -i)
         sm1_sigma += circshift(sm1, -(k)) .* u_k_sigma
     end
 
@@ -41,15 +41,15 @@ function row_mat_times_mat(sm1, sm2)
     sm2_tau = PlainArray(zeros(n), ctx)
 
     for k in 0:d-1
-        u_dk_tau = PlainArray([(l - k) / d in 0:d-1 ? 1 : 0 for  l in 0:n-1], ctx)
+        u_dk_tau = PlainArray([(i - k) / d in 0:d-1 ? 1 : 0 for  i in 0:n-1], ctx)
         sm2_tau += circshift(sm2, -(d*k)) .* u_dk_tau
     end
 
     # Step 2 and 3
     sm3 = sm1_sigma .* sm2_tau
     for k in 1:d-1
-        v_k = PlainArray([0 <= (l % d) && (l % d) < (d-k) ? 1 : 0 for  l in 0:n-1], ctx)
-        v_k_d = PlainArray([(d-k) <= (l % d) && (l % d) < d ? 1 : 0 for  l in 0:n-1], ctx)
+        v_k = PlainArray([0 <= (i % d) && (i % d) < (d-k) ? 1 : 0 for  i in 0:n-1], ctx)
+        v_k_d = PlainArray([(d-k) <= (i % d) && (i % d) < d ? 1 : 0 for  i in 0:n-1], ctx)
         sm1_k = circshift(sm1_sigma, -(k)) .* v_k + circshift(sm1_sigma, -(k-d)) .* v_k_d
         sm2_k = circshift(sm2_tau, -(d*k))
         sm3 += sm1_k .* sm2_k
