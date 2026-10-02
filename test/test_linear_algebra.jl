@@ -59,7 +59,6 @@ end
 
     
 
-    # the result is in row order. This we need to transpose to get the correct matrix in column order
     expected = [  3.5625   2.625   1.6875;
                         14.25    10.5     6.75;
                         43.5     33.0    22.5]
