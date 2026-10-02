@@ -50,7 +50,7 @@ function row_mat_times_mat(sm1, sm2)
     for k in 1:d-1
         v_k = PlainArray([0 <= (l % d) && (l % d) < (d-k) ? 1 : 0 for  l in 0:n-1], ctx)
         v_k_d = PlainArray([(d-k) <= (l % d) && (l % d) < d ? 1 : 0 for  l in 0:n-1], ctx)
-        sm1_k = circshift(sm1_sigma, -(k)) * v_k + circshift(sm1_sigma, -(k-d)) * v_k_d
+        sm1_k = circshift(sm1_sigma, -(k)) .* v_k + circshift(sm1_sigma, -(k-d)) .* v_k_d
         sm2_k = circshift(sm2_tau, -(d*k))
         sm3 += sm1_k .* sm2_k
     end
