@@ -97,6 +97,38 @@ function PlainArray(data::Array{<:Real}, context::SecureContext{<:Unencrypted})
     PlainArray(data, size(data), length(data), context)
 end
 
+"""
+    resize(a::PlainVector{<:Unencrypted}, n::Integer)
+
+Return a `PlainVector` containing `n` elements.
+If `n` is smaller than the current length, the first `n` elements are retained.
+If `n` is larger, the new elements are not guaranteed to be initialized.
+
+See also: [`PlainVector`](@ref), [`capacity`](@ref)
+"""
+function resize(a::PlainVector{<:Unencrypted}, n::Integer)
+    data = similar(a.data, n)
+    copy_len = min(n, length(a))
+    data[1:copy_len] = a.data[1:copy_len]
+    PlainArray(data, (n,), n, a.context)
+end
+
+"""
+    resize(a::SecureVector{<:Unencrypted}, n::Integer)
+
+Return a `SecureVector` containing `n` elements.
+If `n` is smaller than the current length, the first `n` elements are retained.
+If `n` is larger, the new elements are not guaranteed to be initialized.
+
+See also: [`SecureVector`](@ref), [`capacity`](@ref)
+"""
+function resize(a::SecureVector{<:Unencrypted}, n::Integer)
+    data = similar(a.data, n)
+    copy_len = min(n, length(a))
+    data[1:copy_len] = a.data[1:copy_len]
+    SecureArray(data, (n,), n, a.context)
+end
+
 function Base.show(io::IO, pa::PlainArray{<:Unencrypted})
     print(io, pa.data)
 end
