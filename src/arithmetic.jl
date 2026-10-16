@@ -41,7 +41,7 @@ to return the objects as-is, since the default fallback (`collect(x)`) would att
 
 ## Supported broadcast operations
 
-- `.*` (element-wise multiply): `sa .* sa`, `sa .* pa`, `pa .* sa`, `pa .* pa`
+- `.*` (element-wise multiply): `sa .* sa`, `sa .* pa`, `pa .* sa`
 
 ## Example
 
