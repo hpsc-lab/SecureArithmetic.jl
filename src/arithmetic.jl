@@ -83,6 +83,15 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, sa::SecureArray) = multiply(sa, scalar)
 
+# Catch-all: any broadcast operation not listed above is unsupported.
+# The implementations above are more specific and thus win for the defined operations.
+# Without this, Julia's default `broadcasted` returns a lazy `Broadcasted` node whose `materialize` path calls
+# `getindex` — which `SecureArray` does not support — producing a confusing `MethodError`.
+
+@noinline function Base.Broadcast.broadcasted(::SecureArrayStyle, f::F, args...) where {F}
+    throw(ArgumentError("broadcast operation `$f` is not supported for SecureArray/PlainArray. "))
+end
+
 # Circular shift
 """
     circshift(sa::SecureArray, shifts)
