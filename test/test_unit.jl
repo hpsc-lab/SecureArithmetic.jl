@@ -180,10 +180,12 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test pa1 .- sa1 isa SecureArray
             @test sa1 .- 3 isa SecureArray
             @test 4 .- sa1 isa SecureArray
+
         end
 
         @testset verbose=true showtiming=true "unsupported broadcast" begin
             @test_throws ArgumentError sv1 ./ sv2
+            @test_throws ArgumentError sv1 .= sv1 .- sv2
         end
 
         @testset verbose=true showtiming=true "multiply" begin
