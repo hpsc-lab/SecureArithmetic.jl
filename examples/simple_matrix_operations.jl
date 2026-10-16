@@ -57,7 +57,7 @@ function simple_matrix_operations(context)
     println("4 * m1 = ", result_sm_scalar)
 
     result_sm_mult = decrypt(sm_mult, private_key)
-    println("m1 * m2 = ", result_sm_mult)
+    println("m1 .* m2 = ", result_sm_mult)
 
     result_sm_shift1 = decrypt(sm_shift1, private_key)
     println("m1 shifted circularly by (0, 1) = ", result_sm_shift1)
