@@ -92,6 +92,11 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
     throw(ArgumentError("broadcast operation `$f` is not supported for SecureArray/PlainArray. "))
 end
 
+# In-place broadcast assignment (`.=`) is not supported because ciphertexts cannot be mutated.
+@noinline function Base.copyto!(dest::Union{SecureArray, PlainArray}, bc::Base.Broadcast.Broadcasted{SecureArrayStyle})
+    throw(ArgumentError("in-place broadcast assignment (`.=`) is not supported for `$(typeof(dest))`."))
+end
+
 # Circular shift
 """
     circshift(sa::SecureArray, shifts)
