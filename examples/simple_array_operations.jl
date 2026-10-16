@@ -52,7 +52,7 @@ function simple_array_operations(context)
     println("4 * a1 = ", result_sa_scalar)
 
     result_sa_mult = decrypt(sa_mult, private_key)
-    println("a1 * a2 = ", result_sa_mult)
+    println("a1 .* a2 = ", result_sa_mult)
 
     result_sa_shift1 = decrypt(sa_shift1, private_key)
     println("a1 shifted circularly by (0, 1, 0) = ", result_sa_shift1)
