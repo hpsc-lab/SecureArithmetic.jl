@@ -47,7 +47,6 @@ to return the objects as-is, since the default fallback (`collect(x)`) would att
 
 ```julia
 sa1 .* sa2       # element-wise multiply (calls `multiply`)
-sa1 * sa2         # matrix multiply for SecureMatrix (calls `row_mat_times_mat`)
 ```
 
 See also: [`SecureArray`](@ref), [`PlainArray`](@ref), `multiply`
