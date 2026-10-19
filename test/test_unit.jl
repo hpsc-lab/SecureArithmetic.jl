@@ -139,6 +139,24 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test 4 + pa1 isa PlainArray
         end
 
+        @testset verbose=true showtiming=true "add element wise" begin
+            @test sv1 .+ sv2 isa SecureVector
+            @test sv1 .+ pv1 isa SecureVector
+            @test pv1 .+ sv1 isa SecureVector
+            @test sv1 .+ 3 isa SecureVector
+            @test 4 .+ sv1 isa SecureVector
+            @test sm1 .+ sm2 isa SecureMatrix
+            @test sm1 .+ pm1 isa SecureMatrix
+            @test pm1 .+ sm1 isa SecureMatrix
+            @test sm1 .+ 3 isa SecureMatrix
+            @test 4 .+ sm1 isa SecureMatrix
+            @test sa1 .+ sa2 isa SecureArray
+            @test sa1 .+ pa1 isa SecureArray
+            @test pa1 .+ sa1 isa SecureArray
+            @test sa1 .+ 3 isa SecureArray
+            @test 4 .+ sa1 isa SecureArray
+        end
+
         @testset verbose=true showtiming=true "subtract" begin
             @test sv1 - sv2 isa SecureVector
             @test sv1 - pv1 isa SecureVector
@@ -166,25 +184,55 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test 4 - sa1 isa SecureArray
         end
 
+        @testset verbose=true showtiming=true "subtract element wise" begin
+            @test sv1 .- sv2 isa SecureVector
+            @test sv1 .- pv1 isa SecureVector
+            @test pv1 .- sv1 isa SecureVector
+            @test sv1 .- 3 isa SecureVector
+            @test 4 .- sv1 isa SecureVector
+            @test sm1 .- sm2 isa SecureMatrix
+            @test sm1 .- pm1 isa SecureMatrix
+            @test pm1 .- sm1 isa SecureMatrix
+            @test sm1 .- 3 isa SecureMatrix
+            @test 4 .- sm1 isa SecureMatrix
+            @test sa1 .- sa2 isa SecureArray
+            @test sa1 .- pa1 isa SecureArray
+            @test pa1 .- sa1 isa SecureArray
+            @test sa1 .- 3 isa SecureArray
+            @test 4 .- sa1 isa SecureArray
+
+        end
+
+        @testset verbose=true showtiming=true "unsupported broadcast" begin
+            @test_throws ArgumentError sv1 ./ sv2
+            @test_throws ArgumentError sv1 .= sv1 .- sv2
+        end
+
         @testset verbose=true showtiming=true "multiply" begin
             @test sv1 .* sv2 isa SecureVector
             @test sv1 .* pv1 isa SecureVector
             @test pv1 .* sv1 isa SecureVector
             @test pv1 .* pv2 isa PlainVector
             @test sv1 * 3 isa SecureVector
+            @test sv1 .* 3 isa SecureVector
             @test 4 * sv1 isa SecureVector
+            @test 4 .* sv1 isa SecureVector
             @test sm1 .* sm2 isa SecureMatrix
             @test sm1 .* pm1 isa SecureMatrix
             @test pm1 .* sm1 isa SecureMatrix
             @test pm1 .* pm2 isa PlainMatrix
             @test sm1 * 3 isa SecureMatrix
+            @test sm1 .* 3 isa SecureMatrix
             @test 4 * sm1 isa SecureMatrix
+            @test 4 .* sm1 isa SecureMatrix
             @test sa1 .* sa2 isa SecureArray
             @test sa1 .* pa1 isa SecureArray
             @test pa1 .* sa1 isa SecureArray
             @test pa1 .* pa2 isa PlainArray
             @test sa1 * 3 isa SecureArray
+            @test sa1 .* 3 isa SecureArray
             @test 4 * sa1 isa SecureArray
+            @test 4 .* sa1 isa SecureArray
         end
 
         @testset verbose=true showtiming=true "negate" begin
