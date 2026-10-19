@@ -240,6 +240,10 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test sa1 .* 3 isa SecureArray
             @test 4 * sa1 isa SecureArray
             @test 4 .* sa1 isa SecureArray
+            @test pa1 * 3 isa PlainArray
+            @test pa1 .* 3 isa PlainArray
+            @test 4 * pa1 isa PlainArray
+            @test 4 .* pa1 isa PlainArray
         end
 
         @testset verbose=true showtiming=true "negate" begin

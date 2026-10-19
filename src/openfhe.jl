@@ -534,6 +534,11 @@ function multiply(sa::SecureArray{<:OpenFHEBackend}, scalar::Real)
     secure_array
 end
 
+function multiply(pa::PlainArray{<:OpenFHEBackend}, scalar::Real)
+    data = vec(collect(pa)) .* scalar
+    PlainArray(Vector{Float64}(data), pa.context, size(pa))
+end
+
 function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     shift = shift[1]
     # crypto context
