@@ -50,13 +50,14 @@ to return the objects as-is, since the default fallback (`collect(x)`) would att
 
 ## Supported broadcast operations
 
-- `.*` (element-wise multiply): `sa .* sa`, `sa .* pa`, `pa .* sa`, `pa .* pa`
+- `.+` (element-wise add): `sa .+ sa`, `sa .+ pa`, `pa .+ sa`
+- `.-` (element-wise subtract): `sa .- sa`, `sa .- pa`, `pa .- sa`
+- `.*` (element-wise multiply): `sa .* sa`, `sa .* pa`, `pa .* sa`
 
 ## Example
 
 ```julia
 sa1 .* sa2       # element-wise multiply (calls `multiply`)
-sa1 * sa2         # matrix multiply for SecureMatrix (calls `row_mat_times_mat`)
 ```
 
 See also: [`SecureArray`](@ref), [`PlainArray`](@ref), `multiply`
@@ -70,13 +71,40 @@ Base.Broadcast.BroadcastStyle(s::SecureArrayStyle, ::Base.Broadcast.DefaultArray
 Base.Broadcast.broadcastable(sa::SecureArray) = sa
 Base.Broadcast.broadcastable(pa::PlainArray) = pa
 
+# Element-wise add (a +* b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = add(sa1, sa2)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = add(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = add(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa::SecureArray, scalar::Real) = add(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), scalar::Real, sa::SecureArray) = add(sa, scalar)
+
+# Element-wise subtract (a .* b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = subtract(sa1, sa2)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = subtract(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray, scalar::Real) = subtract(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, sa::SecureArray) = subtract(sa, scalar)
+
 # Element-wise multiply (a .* b)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(a, b)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray{B, N}, b::PlainArray{B, N}) where {B, N} = multiply(a, b)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::PlainArray{B, N}, b::SecureArray{B, N}) where {B, N} = multiply(b, a)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::PlainArray{B, N}, b::PlainArray{B, N}) where {B, N} = multiply(a, b)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::SecureArray, b::Real) = multiply(a, b)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::Real, b::SecureArray) = multiply(b, a)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = multiply(sa1, sa2)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = multiply(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = multiply(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray, scalar::Real) = multiply(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, sa::SecureArray) = multiply(sa, scalar)
+
+# Catch-all: any broadcast operation not listed above is unsupported.
+# The implementations above are more specific and thus win for the defined operations.
+# Without this, Julia's default `broadcasted` returns a lazy `Broadcasted` node whose `materialize` path calls
+# `getindex` — which `SecureArray` does not support — producing a confusing `MethodError`.
+
+@noinline function Base.Broadcast.broadcasted(::SecureArrayStyle, f::F, args...) where {F}
+    throw(ArgumentError("broadcast operation `$f` is not supported for SecureArray/PlainArray. "))
+end
+
+# In-place broadcast assignment (`.=`) is not supported because ciphertexts cannot be mutated.
+@noinline function Base.copyto!(dest::Union{SecureArray, PlainArray}, bc::Base.Broadcast.Broadcasted{SecureArrayStyle})
+    throw(ArgumentError("in-place broadcast assignment (`.=`) is not supported for `$(typeof(dest))`."))
+end
 
 # Circular shift
 
