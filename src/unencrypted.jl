@@ -280,7 +280,7 @@ function multiply(sa::SecureArray{<:Unencrypted}, scalar::Real)
 end
 
 function multiply(pa::PlainArray{<:Unencrypted}, scalar::Real)
-    PlainArray(pa.data .* scalar, size(pa), capacity(pa), sa.context)
+    PlainArray(pa.data .* scalar, size(pa), capacity(pa), pa.context)
 end
 
 function rotate(sa::SecureArray{<:Unencrypted, N}, shift) where N
