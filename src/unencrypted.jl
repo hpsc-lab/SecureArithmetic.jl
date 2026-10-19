@@ -214,6 +214,15 @@ function add(sa::SecureArray{<:Unencrypted}, scalar::Real)
     SecureArray(sa.data .+ scalar, size(sa), capacity(sa), sa.context)
 end
 
+function add(pa1::PlainArray{<:Unencrypted}, pa2::PlainArray{<:Unencrypted})
+    PlainArray(pa1.data .+ pa2.data, size(pa1), capacity(pa1), pa1.context)
+end
+
+function add(pa::PlainArray{<:Unencrypted}, scalar::Real)
+    PlainArray(pa.data .+ scalar, size(pa), capacity(pa), pa.context)
+end
+
+
 function subtract(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
     SecureArray(sa1.data .- sa2.data, size(sa1), capacity(sa1), sa1.context)
 end
@@ -226,6 +235,10 @@ function subtract(pa::PlainArray{<:Unencrypted}, sa::SecureArray{<:Unencrypted})
     SecureArray(pa.data .- sa.data, size(sa), capacity(sa), sa.context)
 end
 
+function subtract(pa1::PlainArray{<:Unencrypted}, pa2::PlainArray{<:Unencrypted})
+    PlainArray(pa1.data .- pa2.data, size(pa1), capacity(pa1), pa1.context)
+end
+
 function subtract(sa::SecureArray{<:Unencrypted}, scalar::Real)
     SecureArray(sa.data .- scalar, size(sa), capacity(sa), sa.context)
 end
@@ -234,8 +247,20 @@ function subtract(scalar::Real, sa::SecureArray{<:Unencrypted})
     SecureArray(scalar .- sa.data, size(sa), capacity(sa), sa.context)
 end
 
+function subtract(pa::PlainArray{<:Unencrypted}, scalar::Real)
+    PlainArray(pa.data .- scalar, size(pa), capacity(pa), pa.context)
+end
+
+function subtract(scalar::Real, pa::PlainArray{<:Unencrypted})
+    PlainArray(scalar .- pa.data, size(pa), capacity(pa), pa.context)
+end
+
 function negate(sa::SecureArray{<:Unencrypted})
     SecureArray(-sa.data, size(sa), capacity(sa), sa.context)
+end
+
+function negate(pa::PlainArray{<:Unencrypted})
+    PlainArray(-pa.data, size(pa), capacity(pa), pa.context)
 end
 
 function multiply(sa1::SecureArray{<:Unencrypted}, sa2::SecureArray{<:Unencrypted})
@@ -246,8 +271,16 @@ function multiply(sa::SecureArray{<:Unencrypted}, pa::PlainArray{<:Unencrypted})
     SecureArray(sa.data .* pa.data, size(sa), capacity(sa), sa.context)
 end
 
+function multiply(pa1::PlainArray{<:Unencrypted}, pa2::PlainArray{<:Unencrypted})
+    PlainArray(pa1.data .* pa2.data, size(pa1), capacity(pa1), pa1.context)
+end
+
 function multiply(sa::SecureArray{<:Unencrypted}, scalar::Real)
     SecureArray(sa.data .* scalar, size(sa), capacity(sa), sa.context)
+end
+
+function multiply(pa::PlainArray{<:Unencrypted}, scalar::Real)
+    PlainArray(pa.data .* scalar, size(pa), capacity(pa), pa.context)
 end
 
 function rotate(sa::SecureArray{<:Unencrypted, N}, shift) where N
