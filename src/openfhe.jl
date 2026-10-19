@@ -257,67 +257,48 @@ function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBacke
     plain_array
 end
 
-"""
-    resize(a::PlainVector{<:OpenFHEBackend}, n::Integer)
+function clone_data(cc, pt::OpenFHE.Plaintext)
+    OpenFHE.MakeCKKSPackedPlaintext(cc, Vector(OpenFHE.GetRealPackedValue(pt)))
+end
 
-Return a `PlainVector` containing `n` elements.
-If `n` is smaller than the current length, the first `n` elements are retained.
-If `n` is larger, the new elements are not guaranteed to be initialized.
-When `n` exceeds the current capacity, new plaintexts are allocated.
-When `n` frees a complete batch, excess plaintexts are dropped.
-
-See also: [`PlainVector`](@ref), [`capacity`](@ref)
-"""
-function resize(a::PlainVector{<:OpenFHEBackend}, n::Integer)
-    cc = get_crypto_context(a.context)
-    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
-    n_plaintexts_needed = ceil(Int, n / batch_size)
-    n_plaintexts_current = length(a.data)
-
-    if n_plaintexts_needed < n_plaintexts_current
-        new_data = a.data[1:n_plaintexts_needed]
-    elseif n_plaintexts_needed > n_plaintexts_current
-        new_data = copy(a.data)
-        for _ in (n_plaintexts_current+1):(n_plaintexts_needed - 1)
-            push!(new_data, OpenFHE.MakeCKKSPackedPlaintext(cc, zeros(batch_size)))
-        end
-        push!(new_data, OpenFHE.MakeCKKSPackedPlaintext(cc, zeros(batch_size)))
-    else
-        return PlainArray(a.data, (n,), a.capacity, a.context)
-    end
-
-    PlainArray(new_data, (n,), n_plaintexts_needed * batch_size, a.context)
+function clone_data(cc, ct::OpenFHE.Ciphertext)
+    OpenFHE.Clone(ct)
 end
 
 """
-    resize(a::SecureVector{<:OpenFHEBackend}, n::Integer)
+    resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBackend}}, n::Integer)
 
-Return a `SecureVector` containing `n` elements.
+Return a vector of the same type containing `n` elements.
 If `n` is smaller than the current length, the first `n` elements are retained.
 If `n` is larger, the new elements are not guaranteed to be initialized.
-When `n` exceeds the current capacity, new ciphertexts are allocated via `Clone`.
-When `n` frees a complete batch, excess ciphertexts are dropped.
+When `n` exceeds the current capacity, new plaintexts/ciphertexts are allocated.
+When `n` frees a complete batch, excess plaintexts/ciphertexts are dropped.
 
-See also: [`SecureVector`](@ref), [`capacity`](@ref)
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`capacity`](@ref), [`OpenFHE.SetLength`](@ref)
 """
-function resize(a::SecureVector{<:OpenFHEBackend}, n::Integer)
+function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBackend}}, n::Integer)
     cc = get_crypto_context(a.context)
     batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
-    n_ciphertexts_needed = ceil(Int, n / batch_size)
-    n_ciphertexts_current = length(a.data)
+    n_ct_needed = ceil(Int, n / batch_size)
+    n_ct_current = length(a.data)
 
-    if n_ciphertexts_needed < n_ciphertexts_current
-        new_data = a.data[1:n_ciphertexts_needed]
-    elseif n_ciphertexts_needed > n_ciphertexts_current
-        new_data = copy(a.data)
-        for _ in (n_ciphertexts_current+1):n_ciphertexts_needed
-            push!(new_data, OpenFHE.Clone(a.data[1]))
-        end
-    else
-        return SecureArray(a.data, (n,), a.capacity, a.context)
+    n_reused = min(n_ct_needed, n_ct_current)
+    new_data = [clone_data(cc, a.data[i]) for i in 1:n_reused]
+    for _ in (n_reused+1):n_ct_needed
+        push!(new_data, clone_data(cc, a.data[1]))
     end
 
-    SecureArray(new_data, (n,), n_ciphertexts_needed * batch_size, a.context)
+    if a isa PlainVector
+        if n_ct_needed > n_ct_current
+            OpenFHE.SetLength(new_data[n_ct_current], batch_size)
+        end
+        last_pt_length = n - (n_ct_needed - 1) * batch_size
+        OpenFHE.SetLength(new_data[end], last_pt_length)
+    end
+
+    typeof(a) <: PlainArray ?
+        PlainArray(new_data, (n,), n_ct_needed * batch_size, a.context) :
+        SecureArray(new_data, (n,), n_ct_needed * batch_size, a.context)
 end
 
 function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
