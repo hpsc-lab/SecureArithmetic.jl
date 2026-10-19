@@ -78,14 +78,18 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = add(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa::SecureArray, scalar::Real) = add(sa, scalar)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), scalar::Real, sa::SecureArray) = add(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray, scalar::Real) = add(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, pa::PlainArray) = add(pa, scalar)
 
 # Element-wise subtract (a .* b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = subtract(sa1, sa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = subtract(sa, pa)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(pa, sa)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = subtract(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray, scalar::Real) = subtract(sa, scalar)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, sa::SecureArray) = subtract(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, sa::SecureArray) = subtract(scalar, sa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray, scalar::Real) = subtract(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, pa::PlainArray) = subtract(scalar, pa)
 
 # Element-wise multiply (a .* b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = multiply(sa1, sa2)
@@ -94,6 +98,8 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = multiply(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, sa::SecureArray) = multiply(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray, scalar::Real) = multiply(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, pa::PlainArray) = multiply(pa, scalar)
 
 # Catch-all: any broadcast operation not listed above is unsupported.
 # The implementations above are more specific and thus win for the defined operations.
