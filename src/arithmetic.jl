@@ -2,21 +2,30 @@
 Base.:+(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = add(sa1, sa2)
 Base.:+(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = add(sa, pa)
 Base.:+(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = add(sa, pa)
+Base.:+(pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = add(pa1, pa2)
 Base.:+(sa::SecureArray, scalar::Real) = add(sa, scalar)
 Base.:+(scalar::Real, sa::SecureArray) = add(sa, scalar)
+Base.:+(pa::PlainArray, scalar::Real) = add(pa, scalar)
+Base.:+(scalar::Real, pa::PlainArray) = add(pa, scalar)
 
 # Subtract
 Base.:-(sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = subtract(sa1, sa2)
 Base.:-(sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = subtract(sa, pa)
 Base.:-(pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(pa, sa)
+Base.:-(pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = subtract(pa1, pa2)
 Base.:-(sa::SecureArray, scalar::Real) = subtract(sa, scalar)
 Base.:-(scalar::Real, sa::SecureArray) = subtract(scalar, sa)
+Base.:-(pa::PlainArray, scalar::Real) = subtract(pa, scalar)
+Base.:-(scalar::Real, pa::PlainArray) = subtract(scalar, pa)
 # Negate
 Base.:-(sa::SecureArray) = negate(sa)
+Base.:-(pa::PlainArray) = negate(pa)
 
 # Multiply (scalar)
 Base.:*(sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 Base.:*(scalar::Real, sa::SecureArray) = multiply(sa, scalar)
+Base.:*(pa::PlainArray, scalar::Real) = multiply(pa, scalar)
+Base.:*(scalar::Real, pa::PlainArray) = multiply(pa, scalar)
 
 """
     SecureArrayStyle <: Base.Broadcast.BroadcastStyle
@@ -66,22 +75,31 @@ Base.Broadcast.broadcastable(pa::PlainArray) = pa
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = add(sa1, sa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = add(sa, pa)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = add(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = add(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), sa::SecureArray, scalar::Real) = add(sa, scalar)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), scalar::Real, sa::SecureArray) = add(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), pa::PlainArray, scalar::Real) = add(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), scalar::Real, pa::PlainArray) = add(pa, scalar)
 
 # Element-wise subtract (a .* b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = subtract(sa1, sa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = subtract(sa, pa)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = subtract(pa, sa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = subtract(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), sa::SecureArray, scalar::Real) = subtract(sa, scalar)
-@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, sa::SecureArray) = subtract(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, sa::SecureArray) = subtract(scalar, sa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), pa::PlainArray, scalar::Real) = subtract(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), scalar::Real, pa::PlainArray) = subtract(scalar, pa)
 
 # Element-wise multiply (a .* b)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa1::SecureArray{B, N}, sa2::SecureArray{B, N}) where {B, N} = multiply(sa1, sa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray{B, N}, pa::PlainArray{B, N}) where {B, N} = multiply(sa, pa)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray{B, N}, sa::SecureArray{B, N}) where {B, N} = multiply(sa, pa)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa1::PlainArray{B, N}, pa2::PlainArray{B, N}) where {B, N} = multiply(pa1, pa2)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), sa::SecureArray, scalar::Real) = multiply(sa, scalar)
 @inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, sa::SecureArray) = multiply(sa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), pa::PlainArray, scalar::Real) = multiply(pa, scalar)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, pa::PlainArray) = multiply(pa, scalar)
 
 # Catch-all: any broadcast operation not listed above is unsupported.
 # The implementations above are more specific and thus win for the defined operations.
@@ -98,6 +116,15 @@ end
 end
 
 # Circular shift
+
+function check_shifts(arr::Union{SecureArray, PlainArray}, shifts)
+    if length(shifts) > ndims(arr)
+        throw(ArgumentError("Got rotation index with length $(length(shifts)), expected $(ndims(arr))"))
+    elseif length(shifts) < ndims(arr)
+        shifts = vcat(collect(shifts), zeros(Integer, ndims(arr) - length(shifts)))
+    end
+    return shifts
+end
 """
     circshift(sa::SecureArray, shifts)
 
@@ -112,17 +139,25 @@ Note: To precompute all required rotation indexes, use `init_rotation!`.
 See also: [`SecureArray`](@ref), [`init_rotation!`](@ref)
 """
 function Base.circshift(sa::SecureArray, shifts)
-    if length(shifts) > ndims(sa)
-        throw(ArgumentError("Got rotation index with length $(length(shifts)), expected $(ndims(sa))"))
-    elseif length(shifts) < ndims(sa)
-        shifts = vcat(collect(shifts), zeros(Integer, ndims(sa) - length(shifts)))
-    end
+    shifts = check_shifts(sa, shifts)
 
     if all(shifts .% size(sa) .== 0)
         return sa
     end
 
     rotate(sa, shifts)
+end
+
+function Base.circshift(pa::PlainArray, shifts)
+    shifts = check_shifts(pa, shifts)
+
+    if all(shifts .% size(pa) .== 0)
+        return pa
+    end
+
+    data = collect(pa)
+    shifted = circshift(data, shifts)
+    PlainArray(shifted, pa.context)
 end
 
 Base.:>>>(sa::SecureArray, shift::Integer) = circshift(sa, shift)
