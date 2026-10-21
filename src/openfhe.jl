@@ -274,7 +274,7 @@ If `n` is larger, the new elements are not guaranteed to be initialized.
 When `n` exceeds the current capacity, new plaintexts/ciphertexts are allocated.
 When `n` frees a complete batch, excess plaintexts/ciphertexts are dropped.
 
-See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`capacity`](@ref), [`OpenFHE.SetLength`](@ref)
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`capacity`](@ref)
 """
 function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBackend}}, n::Integer)
     cc = get_crypto_context(a.context)
