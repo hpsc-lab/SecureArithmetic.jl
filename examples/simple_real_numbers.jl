@@ -26,7 +26,7 @@ function simple_real_numbers(context)
 
     sv_scalar = sv1 * 4.0
 
-    sv_mult = sv1 * sv2
+    sv_mult = sv1 .* sv2
 
     sv_shift1 = circshift(sv1, -1)
     sv_shift2 = circshift(sv1, 2)
@@ -48,7 +48,7 @@ function simple_real_numbers(context)
     println("4 * x1 = ", result_sv_scalar)
 
     result_sv_mult = decrypt(sv_mult, private_key)
-    println("x1 * x2 = ", result_sv_mult)
+    println("x1 .* x2 = ", result_sv_mult)
 
     result_sv_shift1 = decrypt(sv_shift1, private_key)
     println("x1 shifted circularly by -1 = ", result_sv_shift1)
