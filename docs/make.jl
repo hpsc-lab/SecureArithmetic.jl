@@ -64,6 +64,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Tutorials" => [
+            "Matrix Operations" => "tutorials/matrix-operations.md",
             "Remote Computation" => "tutorials/remote-computation.md",
         ],
         "API reference" => "reference.md",
