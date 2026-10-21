@@ -257,6 +257,50 @@ function PlainArray(data::Vector{Float64}, context::SecureContext{<:OpenFHEBacke
     plain_array
 end
 
+function clone_data(cc, pt::OpenFHE.Plaintext)
+    OpenFHE.MakeCKKSPackedPlaintext(cc, Vector(OpenFHE.GetRealPackedValue(pt)))
+end
+
+function clone_data(cc, ct::OpenFHE.Ciphertext)
+    OpenFHE.Clone(ct)
+end
+
+"""
+    resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBackend}}, n::Integer)
+
+Return a vector of the same type containing `n` elements.
+If `n` is smaller than the current length, the first `n` elements are retained.
+If `n` is larger, the new elements are not guaranteed to be initialized.
+When `n` exceeds the current capacity, new plaintexts/ciphertexts are allocated.
+When `n` frees a complete batch, excess plaintexts/ciphertexts are dropped.
+
+See also: [`PlainVector`](@ref), [`SecureVector`](@ref), [`capacity`](@ref)
+"""
+function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBackend}}, n::Integer)
+    cc = get_crypto_context(a.context)
+    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc))
+    n_ct_needed = ceil(Int, n / batch_size)
+    n_ct_current = length(a.data)
+
+    n_reused = min(n_ct_needed, n_ct_current)
+    new_data = [clone_data(cc, a.data[i]) for i in 1:n_reused]
+    for _ in (n_reused+1):n_ct_needed
+        push!(new_data, clone_data(cc, a.data[1]))
+    end
+
+    if a isa PlainVector
+        if n_ct_needed > n_ct_current
+            OpenFHE.SetLength(new_data[n_ct_current], batch_size)
+        end
+        last_pt_length = n - (n_ct_needed - 1) * batch_size
+        OpenFHE.SetLength(new_data[end], last_pt_length)
+    end
+
+    typeof(a) <: PlainArray ?
+        PlainArray(new_data, (n,), n_ct_needed * batch_size, a.context) :
+        SecureArray(new_data, (n,), n_ct_needed * batch_size, a.context)
+end
+
 function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
     print(io, collect(pa))
 end

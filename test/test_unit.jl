@@ -146,36 +146,26 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test pv1 .+ pv2 isa PlainVector
             @test sv1 .+ 3 isa SecureVector
             @test 4 .+ sv1 isa SecureVector
+            @test pv1 .+ 3 isa PlainVector
+            @test 4 .+ pv1 isa PlainVector
+
             @test sm1 .+ sm2 isa SecureMatrix
             @test sm1 .+ pm1 isa SecureMatrix
             @test pm1 .+ sm1 isa SecureMatrix
             @test pm1 .+ pm2 isa PlainMatrix
             @test sm1 .+ 3 isa SecureMatrix
             @test 4 .+ sm1 isa SecureMatrix
+            @test pm1 .+ 3 isa PlainMatrix
+            @test 4 .+ pm1 isa PlainMatrix
+
             @test sa1 .+ sa2 isa SecureArray
             @test sa1 .+ pa1 isa SecureArray
             @test pa1 .+ sa1 isa SecureArray
             @test pa1 .+ pa2 isa PlainArray
             @test sa1 .+ 3 isa SecureArray
             @test 4 .+ sa1 isa SecureArray
-        end
-
-        @testset verbose=true showtiming=true "add element wise" begin
-            @test sv1 .+ sv2 isa SecureVector
-            @test sv1 .+ pv1 isa SecureVector
-            @test pv1 .+ sv1 isa SecureVector
-            @test sv1 .+ 3 isa SecureVector
-            @test 4 .+ sv1 isa SecureVector
-            @test sm1 .+ sm2 isa SecureMatrix
-            @test sm1 .+ pm1 isa SecureMatrix
-            @test pm1 .+ sm1 isa SecureMatrix
-            @test sm1 .+ 3 isa SecureMatrix
-            @test 4 .+ sm1 isa SecureMatrix
-            @test sa1 .+ sa2 isa SecureArray
-            @test sa1 .+ pa1 isa SecureArray
-            @test pa1 .+ sa1 isa SecureArray
-            @test sa1 .+ 3 isa SecureArray
-            @test 4 .+ sa1 isa SecureArray
+            @test pa1 .+ 3 isa PlainArray
+            @test 4 .+ pa1 isa PlainArray
         end
 
         @testset verbose=true showtiming=true "subtract" begin
@@ -204,6 +194,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test pa1 - pa2 isa PlainArray
             @test sa1 - 3 isa SecureArray
             @test 4 - sa1 isa SecureArray
+            @test pa1 - 3 isa PlainArray
+            @test 4 - pa1 isa PlainArray
         end
 
         @testset verbose=true showtiming=true "subtract element wise" begin
@@ -213,19 +205,26 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test pv1 .- pv2 isa PlainVector
             @test sv1 .- 3 isa SecureVector
             @test 4 .- sv1 isa SecureVector
+            @test pv1 .- 3 isa PlainVector
+            @test 4 .- pv1 isa PlainVector
+
             @test sm1 .- sm2 isa SecureMatrix
             @test sm1 .- pm1 isa SecureMatrix
             @test pm1 .- sm1 isa SecureMatrix
             @test pm1 .- pm2 isa PlainMatrix
             @test sm1 .- 3 isa SecureMatrix
             @test 4 .- sm1 isa SecureMatrix
+            @test pm1 .- 3 isa PlainMatrix
+            @test 4 .- pm1 isa PlainMatrix
+
             @test sa1 .- sa2 isa SecureArray
             @test sa1 .- pa1 isa SecureArray
             @test pa1 .- sa1 isa SecureArray
             @test pa1 .- pa2 isa PlainArray
             @test sa1 .- 3 isa SecureArray
             @test 4 .- sa1 isa SecureArray
-
+            @test pa1 .- 3 isa PlainArray
+            @test 4 .- pa1 isa PlainArray
         end
 
         @testset verbose=true showtiming=true "unsupported broadcast" begin
@@ -349,6 +348,55 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test size(sm1) == size(pm1)
             @test size(sa1) == size(pa1)
             @test size(sa1, 1) == size(pa1, 1)
+        end
+
+        @testset verbose=true showtiming=true "resize" begin
+            @testset verbose=true showtiming=true "PlainVector" begin
+                pv_resized = pv1
+                for resize_params in (
+                    (; n = 8, c = 8, what="no op"), 
+                    (; n = 9, c = 16, what="increase size, changing capacity"),
+                    (; n = 16, c = 16, what="increase size without changing capacity"),
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
+                    (; n = 7, c = 8, what="reduce size, changing capacity"),
+                )
+                    (; n, c, what) = resize_params
+                    @testset verbose=true showtiming=true "$what" begin
+                        pv_resized = resize(pv_resized, n) 
+                        @test pv_resized isa PlainVector
+                        @test length(pv_resized) == n
+                        @test collect(pv_resized)[1:min(8, n)] == x1[1:min(8, n)]
+                        @test capacity(pv_resized) == (BackendT == Unencrypted ? n : c)
+                        pv_resized + 1
+                        # Modifying the resized vector must not modify the original vector
+                        @test collect(pv1) == x1
+                    end
+                end
+            end
+
+
+            @testset verbose=true showtiming=true "SecureVector" begin
+                sv_resized = sv1
+                for resize_params in (
+                    (; n = 8, c = 8, what="no op"), 
+                    (; n = 9, c = 16, what="increase size, changing capacity"),
+                    (; n = 16, c = 16, what="increase size without changing capacity"),
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
+                    (; n = 7, c = 8, what="reduce size, changing capacity"),
+                )
+                    (; n, c, what) = resize_params
+                    @testset verbose=true showtiming=true "$what" begin
+                        sv_resized = resize(sv_resized, n) 
+                        @test sv_resized isa SecureVector
+                        @test length(sv_resized) == n
+                        @test collect(decrypt(sv_resized, private_key))[1:min(8, n)] ≈ x1[1:min(8, n)]
+                        @test capacity(sv_resized) == (BackendT == Unencrypted ? n : c)
+                        sv_resized + 1
+                        # Modifying the resized vector must not modify the original vector
+                        @test collect(decrypt(sv1, private_key)) ≈ x1
+                    end
+                end
+            end
         end
 
         @testset verbose=true showtiming=true "capacity" begin
