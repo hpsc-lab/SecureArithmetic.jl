@@ -289,8 +289,8 @@ function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBa
     end
 
     if a isa PlainVector
-        if n_ct_needed > n_ct_current
-            OpenFHE.SetLength(new_data[n_ct_current], batch_size)
+        for i in 1:n_ct_needed-1
+            OpenFHE.SetLength(new_data[i], batch_size)
         end
         last_pt_length = n - (n_ct_needed - 1) * batch_size
         OpenFHE.SetLength(new_data[end], last_pt_length)
