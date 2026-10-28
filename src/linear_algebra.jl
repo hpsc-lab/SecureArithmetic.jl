@@ -37,10 +37,23 @@ function row_mat_times_mat(sm1, sm2)
 
     # Construct Ā by repeating A d/l times to fill n = d² slots (Algorithm 3, Jiang et al.)
     if l < d
-         # when increasing the size using resize, the new elements are not initialized, thus we have to mask  
+        # when increasing the size using resize, the new elements are not initialized, thus we have to mask 
         sm1 = resize(sm1, n) .* PlainArray([i <= l*d ? 1 : 0 for i in 1:n], ctx)
-        for k in 0:Int(log2(d÷l))-1
+        r = d ÷ l
+        # In Section 5 Jiang et al:  "For simplicity, we assume that d is a power-of-two"
+        # openfhe_numpy pads to the next power of two, see https://github.com/openfheorg/openfhe-numpy/blob/45857c644bc75321d54f6cdd49cc63f3f948b224/openfhe_numpy/utils/packing.py#L123-L127
+        # This is expensive for already encrypted matrices, see https://github.com/hpsc-lab/SecureArithmetic.jl/pull/119#issuecomment-6467475121
+        # Instead, wee adjust the repeated doubling algorithm
+        p = floor(Int, log2(r))
+        for k in 0:p-1
             sm1 += circshift(sm1, -(l*d*2^k))
+        end
+        # When r is not a power of two, 2^p < r copies exist after doubling.
+        # Mask and shift to fill the remaining r - 2^p copies.
+        remaining = r - 2^p
+        if remaining > 0
+            mask = PlainArray([(remaining + 1) * l * d < i && i <= (2 * remaining + 1) * l * d ? 1 : 0 for i in 1:n], ctx)
+            sm1 += circshift(sm1 .* mask, -(remaining * l * d))
         end
     end
 
@@ -80,7 +93,16 @@ function row_mat_times_mat(sm1, sm2)
     end
 
     # Step 4 (aggregation for rectangular matrix multiplication)
-    for k in 0:Int(log2(d÷l))-1
+    r = d ÷ l
+    p = floor(Int, log2(r))
+    # In repeated aggregation, when r is not a power of two, we must do the inverse of what we did in repeated doubling:
+    # add the last r-2^p entries first, then repeated aggregation p-1 times 
+    remaining = r - 2^p
+    if remaining > 0
+        mask = PlainArray([i > 2^p * l * d ? 1 : 0 for i in 1:n], ctx)
+        sm3 += circshift(sm3 .* mask, -(2^p * l * d))
+    end
+    for k in 0:p-1
         sm3 += circshift(sm3, -(l*d*2^k))
     end
 
