@@ -153,7 +153,7 @@ end
     sv_restored = deserialize(io)
 
     # Multiplication requires eval mult keys — this proves they survived the roundtrip
-    sv_mult = sv_restored * sv_restored
+    sv_mult = sv_restored .* sv_restored
     result = collect(decrypt(sv_mult, sk_restored))
     @test result ≈ x1 .^ 2
 end
