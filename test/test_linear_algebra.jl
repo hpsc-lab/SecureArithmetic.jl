@@ -142,37 +142,42 @@ end
 @testset verbose=true showtiming=true "mat_times_vec" begin
     (context, public_key, private_key) = make_context()
 
-    m = collect([0.25 0.5 0.75 1.0;
-         1.0 2.0 3.0 4.0;
-         4.0 5.0 6.0 7.0;
-         2.0 4.0 8.0 16.0;
-         ])
-        
-    v = [6.0, 3.0, 0.75, 2.0]
-
-    pm = PlainMatrix(m, context)
-    pv = PlainVector(v, context)
-
-
-    sm = encrypt(pm, public_key)
-    sv = encrypt(pv, public_key)
-    
-    init_rotation!(context, private_key, (length(m)), 1:length(m)...)
-    init_multiplication!(context, private_key)
-
-    
-
-    expected = [  
-        5.5625
-        22.25
-        57.5
-        62.0
+    matrices = [
+        collect([0.25 0.5 0.75 1.0;
+                 1.0 2.0 3.0 4.0;
+                 4.0 5.0 6.0 7.0;
+                 2.0 4.0 8.0 16.0]),
+        collect([0.25 0.5 0.75 1.0 2.0;
+                 1.0 2.0 3.0 4.0 5.0;
+                 4.0 5.0 6.0 7.0 8.0;
+                 2.0 4.0 8.0 16.0 32.0;
+                 0.5 1.0 1.5 2.0 2.5]),
+    ]
+    vectors = [
+        [6.0, 3.0, 0.75, 2.0],
+        [6.0, 3.0, 0.75, 2.0, 1.0],
     ]
 
-    @test collect(decrypt(sm * sv, private_key)) ≈ expected   
-    @test collect(decrypt(sm * pv, private_key)) ≈ expected   
-    @test collect(decrypt(pm * sv, private_key)) ≈ expected
-    @test collect(pm * pv) ≈ expected
+    for (m, v) in zip(matrices, vectors)
+        n = size(m, 1)
+        @testset "$(n)x$(n)" begin
+            pm = PlainMatrix(m, context)
+            pv = PlainVector(v, context)
+
+            sm = encrypt(pm, public_key)
+            sv = encrypt(pv, public_key)
+
+            init_rotation!(context, private_key, (length(m)), 1:length(m)...)
+            init_multiplication!(context, private_key)
+
+            expected = m * v
+
+            @test collect(decrypt(sm * sv, private_key)) ≈ expected
+            @test collect(decrypt(sm * pv, private_key)) ≈ expected
+            @test collect(decrypt(pm * sv, private_key)) ≈ expected
+            @test collect(pm * pv) ≈ expected
+        end
+    end
 end
 
 
