@@ -18,7 +18,7 @@ export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects
-export level, capacity
+export level, capacity, resize
 
 # Memory management
 export release_context_memory
@@ -26,11 +26,15 @@ export release_context_memory
 # Multithreading
 export enable_multithreading, disable_multithreading
 
+export eoshift
+export running_sums, total_sums, full_replication
+
 include("types.jl")
 include("operations.jl")
 include("auxiliary.jl")
 include("openfhe.jl")
 include("unencrypted.jl")
 include("arithmetic.jl")
+include("linear_algebra.jl")
 
 end # module SecureArithmetic
