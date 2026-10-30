@@ -2,7 +2,6 @@ name: Benchmark
 
 on:
   pull_request:
-  pull_request:
     paths:
       - 'src/linear_algebra.jl'
       - 'src/arithmetic.jl'
