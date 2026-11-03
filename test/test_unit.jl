@@ -201,6 +201,25 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test collect(decrypt(circshift(sa3, 8), private_key)) ≈ circshift(a3, 8)
             @test collect(decrypt(circshift(sa4, (0, 3, 1, -3)), private_key)) ≈ circshift(a4, (0, 3, 1, -3))
             @test collect(decrypt(circshift(sa4, [-1, -2, -1, 2]), private_key)) ≈ circshift(a4, [-1, -2, -1, 2])
+
+
+            @testset verbose=true showtiming=true "across ciphertext boundaries" begin
+                for n in [batch_size-1, batch_size, batch_size+1, 2*batch_size-1, 2*batch_size, 2*batch_size+1]
+                    x = collect(Float64, 1:n)
+                    init_rotation!(context, private_key, (n,), 1:n...)
+                    init_multiplication!(context, private_key)
+
+                    px = PlainVector(x, context)
+                    sx = encrypt(px, public_key)
+                        @testset verbose=true showtiming=true "$(ceil(Int, n / batch_size)) ciphertext(s) (n=$n)" begin
+                        for s in -n:n
+                            @testset "shift=$s" begin
+                                @test collect(decrypt(circshift(sx, s), private_key)) ≈ circshift(x, s)
+                            end
+                        end
+                    end
+                end
+            end
         end
 
         @testset verbose=true showtiming=true "multithreading" begin
