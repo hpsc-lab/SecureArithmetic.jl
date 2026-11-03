@@ -1,6 +1,7 @@
 module TestLinearAlgebra
 
 using Test
+using Random
 using SecureArithmetic
 using OpenFHE
 
@@ -12,7 +13,7 @@ function make_context()
     parameters = CCParams{CryptoContextCKKSRNS}()
     SetSecretKeyDist(parameters, UNIFORM_TERNARY)
     SetSecurityLevel(parameters, HEStd_NotSet)
-    SetRingDim(parameters, 1 << 12)
+    SetRingDim(parameters, 1 << 5)
     SetScalingModSize(parameters, 59)
     SetScalingTechnique(parameters, FLEXIBLEAUTO)
     SetFirstModSize(parameters, 60)
@@ -112,25 +113,15 @@ end
 @testset verbose=true showtiming=true "mat_times_vec" begin
     (context, public_key, private_key) = make_context()
 
-    matrices = [
-        collect([0.25 0.5 0.75 1.0;
-                 1.0 2.0 3.0 4.0;
-                 4.0 5.0 6.0 7.0;
-                 2.0 4.0 8.0 16.0]),
-        collect([0.25 0.5 0.75 1.0 2.0;
-                 1.0 2.0 3.0 4.0 5.0;
-                 4.0 5.0 6.0 7.0 8.0;
-                 2.0 4.0 8.0 16.0 32.0;
-                 0.5 1.0 1.5 2.0 2.5]),
-    ]
-    vectors = [
-        [6.0, 3.0, 0.75, 2.0],
-        [6.0, 3.0, 0.75, 2.0, 1.0],
-    ]
+    Random.seed!(3141)
 
-    for (m, v) in zip(matrices, vectors)
-        n = size(m, 1)
-        @testset "$(n)x$(n)" begin
+    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(SecureArithmetic.get_crypto_context(context)))
+    d_fits_batch_size = Int(floor(sqrt(batch_size)))
+
+    for d in [d_fits_batch_size, d_fits_batch_size+1]
+        m = rand(d,d)
+        v = rand(d)
+        @testset "$(d)x$(d)" begin
             pm = PlainMatrix(m, context)
             pv = PlainVector(v, context)
 
@@ -154,6 +145,6 @@ end
 release_context_memory()
 GC.gc()
 
-end # @testset "test_serialization.jl"
+end # @testset "test_linear_algebra.jl"
 
 end # module
