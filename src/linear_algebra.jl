@@ -1,4 +1,63 @@
 """
+    init_matrix_multiplication!(context::SecureContext, private_key::PrivateKey,
+                                shape_a, shape_b)
+
+Generate all rotation keys required to multiply arrays of shape `shape_a` and `shape_b` using
+`*`, and store them in the given `context`. `shape_a` has to be the shape of a matrix, while
+`shape_b` may be the shape of either a matrix or a vector.
+
+Note: Matrix multiplication additionally requires multiplication keys, see
+[`init_multiplication!`](@ref).
+
+See also: [`SecureContext`](@ref), [`PrivateKey`](@ref), [`init_multiplication!`](@ref),
+[`init_rotation!`](@ref)
+"""
+function init_matrix_multiplication!(context::SecureContext, private_key::PrivateKey,
+                                     shape_a, shape_b)
+    if length(shape_a) != 2
+        throw(DimensionMismatch("first operand must be a matrix, got shape $shape_a"))
+    end
+    if !(length(shape_b) in (1, 2))
+        throw(DimensionMismatch("second operand must be a matrix or a vector, " *
+                                "got shape $shape_b"))
+    end
+    d1, d2 = shape_a
+    # A vector operand is multiplied as a d×1 matrix
+    d3 = length(shape_b) == 1 ? 1 : shape_b[2]
+    if shape_b[1] != d2
+        throw(DimensionMismatch("second dimension of first operand ($d2) must match first " *
+                                "dimension of second operand ($(shape_b[1]))"))
+    end
+
+    # All rotations are applied to flattened (1D) arrays, each with its own length:
+
+    # `extract_columns` rotates the first operand, flattened to length d1 * d2
+    if d2 > 1
+        init_rotation!(context, private_key, (d1 * d2,), (-d1,))
+
+        # `full_replication` rotates each column of the second operand, i.e. a vector of
+        # length d2, by all powers of two in both directions. Only required for an encrypted
+        # second operand, but the shapes alone do not tell whether it is encrypted.
+        l = floor(Int, log2(d2))
+        # For d2 == 2^l, the largest rotation is 2^(l - 1)
+        k_max = d2 == 2^l ? l - 1 : l
+        init_rotation!(context, private_key, (d2,),
+                       ((sign * 2^k,) for k in 0:k_max for sign in (1, -1))...)
+    end
+    if d3 > 1
+        # `extract_columns` rotates the second operand, flattened to length d2 * d3
+        init_rotation!(context, private_key, (d2 * d3,), (-d2,))
+        # `combine_columns` rotates the resulting columns, resized to length d1 * d3
+        init_rotation!(context, private_key, (d1 * d3,), (((j - 1) * d1,) for j in 2:d3)...)
+    end
+
+    nothing
+end
+
+
+
+
+"""
     extract_columns(mat)
 
 Extract the columns of a column-major `SecureMatrix` or `PlainMatrix` as a list of vectors

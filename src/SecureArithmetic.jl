@@ -15,6 +15,7 @@ export Unencrypted, OpenFHEBackend
 
 # Crypto operations
 export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
+export init_matrix_multiplication!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects

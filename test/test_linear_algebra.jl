@@ -85,7 +85,7 @@ end
     sm1 = encrypt(pm1, public_key)
     sm2 = encrypt(pm2, public_key)
     
-    init_rotation!(context, private_key, (length(m1)), 1:length(m1)...)
+    init_matrix_multiplication!(context, private_key, size(m1), size(m2))
     init_multiplication!(context, private_key)
 
     
@@ -122,7 +122,7 @@ end
     sm1 = encrypt(pm1, public_key)
     sm2 = encrypt(pm2, public_key)
     
-    init_rotation!(context, private_key, (length(m1)), 1:length(m1)...)
+    init_matrix_multiplication!(context, private_key, size(m1), size(m2))
     init_multiplication!(context, private_key)
 
     
@@ -158,7 +158,7 @@ end
             sm = encrypt(pm, public_key)
             sv = encrypt(pv, public_key)
 
-            init_rotation!(context, private_key, (length(m)), 1:length(m)...)
+            init_matrix_multiplication!(context, private_key, size(m), size(v))
             init_multiplication!(context, private_key)
 
             expected = m * v
