@@ -25,11 +25,14 @@ public_key, private_key = generate_keys(context)
 init_multiplication!(context, private_key) # needed for multiplication
 init_bootstrapping!(context, private_key)  # needed for bootstrap!
 init_rotation!(context, private_key, (3, 3), (1, -1), (0, 1))
+init_matrix_multiplication!(context, private_key, (3, 3), (3, 3)) # needed for `*`
 # output
 
 ```
 
 Rotation indexes used by [`circshift`](@ref) must be initialized in advance. The exact indexes depend on the shifts in your computation.
+
+Matrix multiplication rotates internally as well, but you do not have to work out those shifts yourself: [`init_matrix_multiplication!`](@ref) takes the shapes of the two operands, in the same order as in `a * b`, and initializes exactly the rotation indexes the algorithm uses. That is `3d - 2` shifts for a `d`-by-`d` left operand rather than all `d^2` shifts of the internal working vector, which matters at realistic ring dimensions where every rotation key is expensive to generate and store. Matrix multiplication additionally requires [`init_multiplication!`](@ref).
 
 ## Wrap, encrypt, and compute
 
@@ -72,9 +75,9 @@ Addition and subtraction work element by element. `sa1 * 4.0` multiplies every v
 
 ### Why `.*` for element-wise multiplication?
 
-SecureArithmetic follows Julia's standard operator conventions. In Julia, `*` on matrices means linear algebra matrix multiplication, while `.*` means broadcasted, element-wise multiplication. SecureArray supports scalar `*` and uses `.*` to make element-wise multiplication explicit, consistent with ordinary Julia arrays. For example, if `A` and `B` are julia matrices, `A * B` performs matrix multiplication; `A .* B` multiplies corresponding entries element wise. SecureArray currently provides the latter operation for SecureArrays, rather than matrix multiplication.
+SecureArithmetic follows Julia's standard operator conventions. In Julia, `*` on matrices means linear algebra matrix multiplication, while `.*` means broadcasted, element-wise multiplication. SecureArray supports scalar `*` and uses `.*` to make element-wise multiplication explicit, consistent with ordinary Julia arrays. For example, if `A` and `B` are julia matrices, `A * B` performs matrix multiplication; `A .* B` multiplies corresponding entries element wise. SecureArray follows the same convention, and `*` on a [`SecureMatrix`](@ref) requires the keys from [`init_matrix_multiplication!`](@ref).
 
-Julia also uses dotted operators for broadcasted array arithmetic (`.+`, `.-`, and `.*`). SecureArithmetic supports these operations as well. For the supported array-array operations, `+` and `.+` (likewise `-` and `.-`) both apply elementwise; Multiplication is the exception where only `.*` is the spelling to use for element-wise multiplication and `*` will be matrix multiplication but is not implemented yet. 
+Julia also uses dotted operators for broadcasted array arithmetic (`.+`, `.-`, and `.*`). SecureArithmetic supports these operations as well. For the supported array-array operations, `+` and `.+` (likewise `-` and `.-`) both apply elementwise; Multiplication is the exception, where `.*` is the spelling for element-wise multiplication and `*` performs matrix multiplication.
 
 [`circshift`](@ref) rotates values circularly along each dimension, so values shifted past one edge wrap around to the other. [`bootstrap!`](@ref) refreshes the ciphertext to increase the levels available for further homomorphic computation. It is an in-place operation: it refreshes `sm1` itself, and the returned value refers to the refreshed array.
 

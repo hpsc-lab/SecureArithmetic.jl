@@ -1,3 +1,99 @@
+# Returns the unique `circshift` amounts that `row_mat_times_mat` applies to the flattened
+# length-d² arrays, for `sm1` of shape `(d, l)` and `sm2` of shape `(d, d)`.
+#
+# `row_mat_times_mat` flattens both operands and resizes `sm1` to `n = d²` before performing
+# any rotation, so every shift below is a 1D `circshift` on a length-`n` array. The shifts
+# are listed in the same order in which `row_mat_times_mat` performs them, and this function
+# must be kept in sync with it.
+#
+# The resulting set is `{-(d-1), …, d-1} ∪ {0, -d, …, -(d-1)*d}`, i.e. `3d - 2` shifts
+# independent of `l`, because every shift of the repeated doubling/aggregation steps is a
+# multiple of `d` smaller than `n`, and the shifts of steps 2 and 3 are contained in the
+# shifts of the sigma and tau transformations.
+function compute_matrix_multiplication_shifts(d::Integer, l::Integer)
+    shifts = Int[]
+    r = d ÷ l
+    p = floor(Int, log2(r))
+    remaining = r - 2^p
+
+    # Construction of Ā by repeated doubling, plus the fill of the remaining copies
+    if l < d
+        for k in 0:p-1
+            push!(shifts, -(l * d * 2^k))
+        end
+        if remaining > 0
+            push!(shifts, -(remaining * l * d))
+        end
+    end
+
+    # Step 1-1: linear transformation sigma on Ā
+    for k in -d+1:d-1
+        push!(shifts, -k)
+    end
+
+    # Step 1-2: linear transformation tau on B
+    for k in 0:d-1
+        push!(shifts, -(d * k))
+    end
+
+    # Steps 2 and 3
+    for k in 1:l-1
+        push!(shifts, -k, -(k - d), -(d * k))
+    end
+
+    # Step 4: aggregation for rectangular matrix multiplication
+    if remaining > 0
+        push!(shifts, -(2^p * l * d))
+    end
+    for k in 0:p-1
+        push!(shifts, -(l * d * 2^k))
+    end
+
+    unique(shifts)
+end
+
+"""
+    init_matrix_multiplication!(context::SecureContext, private_key::PrivateKey,
+                                shape_a, shape_b)
+
+Generate the rotation keys required to compute the matrix product `a * b` using the
+`private_key`, and store them in the given `context`. `shape_a` and `shape_b` are the shapes
+of the two operands, given in the same order as in `a * b`: `shape_b` is either `(d, l)` for
+a matrix or `(d,)` for a vector, where `l` has to divide `d`, and `shape_a` has to be
+`(d, d)`.
+
+Only the shifts the multiplication algorithm actually performs are initialized, which are
+`3d - 2` instead of all `d²` possible shifts of the internal working vector. Note that
+[`init_multiplication!`](@ref) is required for matrix multiplication as well.
+
+See also: [`SecureContext`](@ref), [`PrivateKey`](@ref), [`init_multiplication!`](@ref),
+[`init_rotation!`](@ref)
+"""
+function init_matrix_multiplication!(context::SecureContext, private_key::PrivateKey,
+                                     shape_a, shape_b)
+    if !(length(shape_b) in (1, 2))
+        throw(DimensionMismatch("second operand must be a matrix or a vector, " *
+                                "got shape $shape_b"))
+    end
+    # A vector operand is multiplied as a d×1 matrix
+    d = shape_b[1]
+    l = length(shape_b) == 1 ? 1 : shape_b[2]
+    if d < 1 || l < 1
+        throw(DimensionMismatch("second operand must not be empty, got shape $shape_b"))
+    end
+
+    # Mirror the dimension checks of `row_mat_times_mat`
+    if length(shape_a) != 2 || shape_a[1] != d || shape_a[2] != d
+        throw(DimensionMismatch("first operand must be a $d×$d matrix, got shape $shape_a"))
+    end
+    if d % l != 0
+        throw(DimensionMismatch("number of rows l=$l does not divide number of columns d=$d"))
+    end
+
+    init_rotation!(context, private_key, d * d,
+                   compute_matrix_multiplication_shifts(d, l)...)
+end
+
 """
 Multiply two d x d matrices in row order
 
