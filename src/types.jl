@@ -183,6 +183,40 @@ See also: [`length`](@ref), [`SecureArray`](@ref), [`PlainArray`](@ref)
 """
 capacity(a::Union{PlainArray, SecureArray}) = a.capacity
 
+"""
+    reshape(a::SecureArray, shape)
+
+Return a `SecureArray` with the same data but a different shape.
+The new shape must have the same total number of elements as the original.
+
+See also: [`SecureArray`](@ref)
+"""
+function Base.reshape(a::SecureArray, shape::NTuple{M, Int}) where M
+    if prod(shape) != length(a)
+        throw(DimensionMismatch("new shape $(shape) is incompatible with array of length $(length(a))"))
+    end
+    SecureArray(a.data, shape, a.capacity, a.context)
+end
+
+Base.reshape(a::SecureArray, dims::Int...) = reshape(a, dims)
+
+"""
+    reshape(a::PlainArray, shape)
+
+Return a `PlainArray` with the same data but a different shape.
+The new shape must have the same total number of elements as the original.
+
+See also: [`PlainArray`](@ref)
+"""
+function Base.reshape(a::PlainArray, shape::NTuple{M, Int}) where M
+    if prod(shape) != length(a)
+        throw(DimensionMismatch("new shape $(shape) is incompatible with array of length $(length(a))"))
+    end
+    PlainArray(a.data, shape, a.capacity, a.context)
+end
+
+Base.reshape(a::PlainArray, dims::Int...) = reshape(a, dims)
+
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
 # Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20
