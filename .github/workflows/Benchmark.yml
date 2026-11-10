@@ -56,7 +56,7 @@ jobs:
       - name: Generate report
         if: always() && steps.benchmark.outputs.status != ''
         run: |
-          bash SecureArithmetic.jl/.github/scripts/benchmark-report.sh \
+          python3 SecureArithmetic.jl/.github/scripts/benchmark-report.py \
             results.csv \
             "${{ steps.benchmark.outputs.status }}" \
             > report.md
