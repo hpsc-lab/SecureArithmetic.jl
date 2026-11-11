@@ -53,6 +53,18 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             end
         end
 
+        @testset verbose=true showtiming=true "init_matrix_multiplication!" begin
+            @test_nowarn init_matrix_multiplication!(context, private_key, (4, 2), (2, 3))
+            @test_nowarn init_matrix_multiplication!(context, private_key, (4, 2), (2,))
+            @test_nowarn init_matrix_multiplication!(context, private_key, (1, 1), (1, 1))
+            @test_throws DimensionMismatch init_matrix_multiplication!(context, private_key,
+                                                                      (4,), (4, 2))
+            @test_throws DimensionMismatch init_matrix_multiplication!(context, private_key,
+                                                                       (4, 2), (2, 3, 4))
+            @test_throws DimensionMismatch init_matrix_multiplication!(context, private_key,
+                                                                       (4, 2), (3, 2))
+        end
+
         x1 = [0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0]
         x2 = [5.0, 4.0, 3.0, 2.0, 1.0, 0.75, 0.5, 0.25]
         m1 = [0.25 0.5;
