@@ -135,7 +135,7 @@ Return the real-valued data contained in `pa`.
 See also: [`PlainArray`](@ref)
 """
 function Base.collect(pa::PlainArray{<:Unencrypted})
-    pa.data
+    reshape(pa.data, pa.shape)
 end
 
 """
