@@ -15,6 +15,7 @@ export Unencrypted, OpenFHEBackend
 
 # Crypto operations
 export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
+export init_matrix_multiplication!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects
@@ -32,5 +33,6 @@ include("auxiliary.jl")
 include("openfhe.jl")
 include("unencrypted.jl")
 include("arithmetic.jl")
+include("linear_algebra.jl")
 
 end # module SecureArithmetic

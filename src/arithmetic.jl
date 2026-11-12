@@ -38,8 +38,8 @@ a lazy `Broadcasted` expression tree and materializes it element-by-element — 
 
 Instead, we eagerly evaluate broadcast expressions by overriding
 [`Base.Broadcast.broadcasted`](https://docs.julialang.org/en/v1/base/arrays/#Base.Broadcast.broadcasted)
-for specific operations, returning the computed result
-directly. This is the same approach Julia Base uses for `AbstractRange` operations in
+for specific operations, returning the computed result directly. 
+    This is the same approach Julia Base uses for `AbstractRange` operations in
 [`base/broadcast.jl`](https://github.com/JuliaLang/julia/blob/d1c37793dd2ab0de6bca636e1d7f2ceb43150a9c/base/broadcast.jl#L1176), e.g.,
 `broadcasted(::DefaultArrayStyle{1}, ::typeof(*), x::Number, r::LinRange)`.
 
@@ -158,3 +158,16 @@ function Base.circshift(pa::PlainArray, shifts)
     shifted = circshift(data, shifts)
     PlainArray(shifted, pa.context)
 end
+
+
+# Matrix Multiplication
+# For matrices in column-major order, we have to swap the arguments order
+Base.:*(sm1::SecureMatrix{B, N}, sm2::SecureMatrix{B, N}) where {B, N} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+Base.:*(sm1::PlainMatrix{B}, sm2::SecureMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+Base.:*(sm1::SecureMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1) 
+Base.:*(sm1::PlainMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+# d×d-Matrix * d-Vector can be treated as d×d-Matrix * d×1-Matrix, where l=1 divides d
+Base.:*(sm::SecureMatrix{B, N}, sv::SecureVector{B, N}) where {B, N} = SecureArithmetic.row_mat_times_mat(reshape(sv, (length(sv), 1)), sm)
+Base.:*(sm::PlainMatrix{B}, sv::SecureVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(sv, (length(sv), 1)), sm)
+Base.:*(sm::SecureMatrix{B}, pv::PlainVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(pv, (length(pv), 1)), sm) 
+Base.:*(sm::PlainMatrix{B}, pv::PlainVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(pv, (length(pv), 1)), sm)
