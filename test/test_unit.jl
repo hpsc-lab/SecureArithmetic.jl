@@ -369,6 +369,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                         @test pv_resized isa PlainVector
                         @test length(pv_resized) == n
                         collected = collect(pv_resized)
+                        # resize must never expose uninitialized memory
+                        @test all(isfinite, collected)
                         @test length(collected) == n
                         @test collected[1:min_size] == x1[1:min_size]
                         @test capacity(pv_resized) == (BackendT == Unencrypted ? n : c)
@@ -398,6 +400,8 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
                         @test sv_resized isa SecureVector
                         @test length(sv_resized) == n
                         collected = collect(decrypt(sv_resized, private_key))
+                        # resize must never expose uninitialized memory
+                        @test all(isfinite, collected)
                         @test length(collected) == n
                         @test collected[1:min_size] ≈ x1[1:min_size]
                         @test capacity(sv_resized) == (BackendT == Unencrypted ? n : c)
