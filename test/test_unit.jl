@@ -109,6 +109,17 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
         sa3 = encrypt(pa3, public_key)
         sa4 = encrypt(pa4, public_key)
 
+        @testset verbose=true showtiming=true "reshape" begin
+            # all possible shapes, i.e. all factorizations of length(a1) == 30
+            for shape in ((30,),
+                          (2, 15), (3, 10), (5, 6), (6, 5), (10, 3), (15, 2),
+                          (2, 3, 5), (2, 5, 3), (3, 2, 5),
+                          (3, 5, 2), (5, 2, 3), (5, 3, 2))
+                expected = reshape(a1, shape)
+                @test collect(reshape(pa1, shape)) == expected
+                @test collect(decrypt(reshape(sa1, shape), private_key)) ≈ expected
+            end
+        end
 
         @testset verbose=true showtiming=true "add" begin
             @test sv1 + sv2 isa SecureVector
