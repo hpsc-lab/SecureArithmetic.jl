@@ -350,6 +350,69 @@ for backend in ((; name = "OpenFHE", BackendT = OpenFHEBackend, context = contex
             @test size(sa1, 1) == size(pa1, 1)
         end
 
+        @testset verbose=true showtiming=true "resize" begin
+            @testset verbose=true showtiming=true "PlainVector" begin
+                pv_resized = pv1
+                min_size = length(pv_resized)
+                for resize_params in (
+                    (; n = 8, c = 8, what="no op"), 
+                    (; n = 9, c = 16, what="increase size, changing capacity"),
+                    (; n = 16, c = 16, what="increase size without changing capacity"),
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
+                    (; n = 7, c = 8, what="reduce size, changing capacity"),
+                    (; n = 20, c = 24, what="increase size, adding two plaintexts"),
+                )
+                    (; n, c, what) = resize_params
+                    min_size = min(n, min_size)
+                    @testset verbose=true showtiming=true "$what" begin
+                        pv_resized = resize(pv_resized, n) 
+                        @test pv_resized isa PlainVector
+                        @test length(pv_resized) == n
+                        collected = collect(pv_resized)
+                        # resize must never expose uninitialized memory
+                        @test all(isfinite, collected)
+                        @test length(collected) == n
+                        @test collected[1:min_size] == x1[1:min_size]
+                        @test capacity(pv_resized) == (BackendT == Unencrypted ? n : c)
+                        pv_resized + 1
+                        # Modifying the resized vector must not modify the original vector
+                        @test collect(pv1) == x1
+                    end
+                end
+            end
+
+
+            @testset verbose=true showtiming=true "SecureVector" begin
+                sv_resized = sv1
+                min_size = length(sv_resized)
+                for resize_params in (
+                    (; n = 8, c = 8, what="no op"), 
+                    (; n = 9, c = 16, what="increase size, changing capacity"),
+                    (; n = 16, c = 16, what="increase size without changing capacity"),
+                    (; n = 9, c = 16, what="reduce size without changing capacity"), 
+                    (; n = 7, c = 8, what="reduce size, changing capacity"),
+                    (; n = 20, c = 24, what="increase size, adding two ciphertexts"),
+                )
+                    (; n, c, what) = resize_params
+                    min_size = min(n, min_size)
+                    @testset verbose=true showtiming=true "$what" begin
+                        sv_resized = resize(sv_resized, n) 
+                        @test sv_resized isa SecureVector
+                        @test length(sv_resized) == n
+                        collected = collect(decrypt(sv_resized, private_key))
+                        # resize must never expose uninitialized memory
+                        @test all(isfinite, collected)
+                        @test length(collected) == n
+                        @test collected[1:min_size] ≈ x1[1:min_size]
+                        @test capacity(sv_resized) == (BackendT == Unencrypted ? n : c)
+                        sv_resized + 1
+                        # Modifying the resized vector must not modify the original vector
+                        @test collect(decrypt(sv1, private_key)) ≈ x1
+                    end
+                end
+            end
+        end
+
         @testset verbose=true showtiming=true "capacity" begin
             @test capacity(pv1) == 8
             @test capacity(sv1) == 8
