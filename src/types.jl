@@ -217,6 +217,214 @@ end
 
 Base.reshape(a::PlainArray, dims::Int...) = reshape(a, dims)
 
+############################################################################################
+# Packed arrays
+############################################################################################
+
+# Smallest power of two that is `>= n`, with `next_power_of_two(0) == 1`.
+next_power_of_two(n::Integer) = nextpow(2, max(n, 1))
+
+"""
+    PlainArrayPacked{Backend, N, ArrayT}
+
+Holds an encoded - but not encrypted - `N`-dimensional array in *packed* layout, which is the
+layout every matrix multiplication runs on. Can be converted to a [`SecureArrayPacked`](@ref)
+using [`encrypt`](@ref).
+
+Packing does two things to the data:
+
+1. every dimension is zero-padded to the next power of two, and
+2. the resulting block is *tiled*, i.e. repeated, so that it fills the underlying storage
+   completely (`length == capacity`).
+
+Together they make a rotation of the packed array a plain, level-free rotation of the
+underlying ciphertext: the block length divides the slot count exactly, so the wrap-around of
+a block-cyclic shift is supplied by the neighbouring tile. An unpacked [`PlainArray`](@ref)
+whose length is below its capacity has to synthesize that wrap-around with masks instead,
+which costs a multiplicative level per rotation.
+
+The user-visible shape is the unpadded `shape`; [`collect`](@ref) and [`decrypt`](@ref) crop
+back to it.
+
+See also: [`SecureArrayPacked`](@ref), [`PlainArray`](@ref), [`encrypt`](@ref),
+[`init_matrix_multiplication!`](@ref)
+"""
+struct PlainArrayPacked{CryptoBackendT <: AbstractCryptoBackend, N, ArrayT}
+    array::ArrayT
+    shape::NTuple{N, Int}
+    padded_shape::NTuple{N, Int}
+
+    function PlainArrayPacked(array::PlainArray{CryptoBackendT, 1}, shape::NTuple{N, Int},
+                              padded_shape::NTuple{N, Int}) where {CryptoBackendT, N}
+        new{CryptoBackendT, N, typeof(array)}(array, shape, padded_shape)
+    end
+end
+
+"""
+    SecureArrayPacked{Backend, N, ArrayT}
+
+Holds an encrypted `N`-dimensional array in *packed* layout. Can be converted to a
+[`PlainArrayPacked`](@ref) using [`decrypt`](@ref). See [`PlainArrayPacked`](@ref) for what
+packing means and why it matters.
+
+See also: [`PlainArrayPacked`](@ref), [`SecureArray`](@ref), [`decrypt`](@ref),
+[`init_matrix_multiplication!`](@ref)
+"""
+struct SecureArrayPacked{CryptoBackendT <: AbstractCryptoBackend, N, ArrayT}
+    array::ArrayT
+    shape::NTuple{N, Int}
+    padded_shape::NTuple{N, Int}
+
+    function SecureArrayPacked(array::SecureArray{CryptoBackendT, 1}, shape::NTuple{N, Int},
+                               padded_shape::NTuple{N, Int}) where {CryptoBackendT, N}
+        new{CryptoBackendT, N, typeof(array)}(array, shape, padded_shape)
+    end
+end
+
+"""
+    PlainMatrixPacked{Backend, ArrayT}
+
+Alias for `PlainArrayPacked{Backend, 2, ArrayT}`.
+
+See also: [`PlainArrayPacked`](@ref)
+"""
+const PlainMatrixPacked{Backend, ArrayT} = PlainArrayPacked{Backend, 2, ArrayT}
+
+"""
+    PlainVectorPacked{Backend, ArrayT}
+
+Alias for `PlainArrayPacked{Backend, 1, ArrayT}`.
+
+See also: [`PlainArrayPacked`](@ref)
+"""
+const PlainVectorPacked{Backend, ArrayT} = PlainArrayPacked{Backend, 1, ArrayT}
+
+"""
+    SecureMatrixPacked{Backend, ArrayT}
+
+Alias for `SecureArrayPacked{Backend, 2, ArrayT}`.
+
+See also: [`SecureArrayPacked`](@ref)
+"""
+const SecureMatrixPacked{Backend, ArrayT} = SecureArrayPacked{Backend, 2, ArrayT}
+
+"""
+    SecureVectorPacked{Backend, ArrayT}
+
+Alias for `SecureArrayPacked{Backend, 1, ArrayT}`.
+
+See also: [`SecureArrayPacked`](@ref)
+"""
+const SecureVectorPacked{Backend, ArrayT} = SecureArrayPacked{Backend, 1, ArrayT}
+
+# Anything in packed layout, encrypted or not. Spelled out as an alias because it carries the
+# backend and the dimension through the element-wise operators in `arithmetic.jl`.
+const AnyArrayPacked{Backend, N} = Union{PlainArrayPacked{Backend, N},
+                                         SecureArrayPacked{Backend, N}}
+
+# Anything in *flat* layout, encrypted or not, i.e. the ordinary unpadded and untiled storage of
+# a `PlainArray`/`SecureArray`. Spelled out as an alias for the same reason as `AnyArrayPacked`,
+# and named after the layout rather than after being the usual one.
+const AnyArrayFlat{Backend, N} = Union{PlainArray{Backend, N}, SecureArray{Backend, N}}
+
+# The operand pairs a matrix product accepts. Both operands have to be in the same layout: the
+# kernel runs on the packed layout, so a pair of flat operands is packed on the way in and
+# unpacked again on the way out, see `as_packed` and `as_unpacked`.
+const AnyFlatMatrix{Backend} = AnyArrayFlat{Backend, 2}
+const AnyFlatVector{Backend} = AnyArrayFlat{Backend, 1}
+const AnyPackedMatrix{Backend} = AnyArrayPacked{Backend, 2}
+const AnyPackedVector{Backend} = AnyArrayPacked{Backend, 1}
+
+# Wrap the result of an operation on the inner array back up, picking the constructor that
+# matches whether it is encrypted or not.
+pack_result(a::PlainArray, shape, padded_shape) = PlainArrayPacked(a, shape, padded_shape)
+pack_result(a::SecureArray, shape, padded_shape) = SecureArrayPacked(a, shape, padded_shape)
+
+"""
+    size(a::Union{PlainArrayPacked, SecureArrayPacked})
+
+Return the unpadded shape of `a`, i.e. the shape of the data it was created from.
+
+See also: [`PlainArrayPacked`](@ref), [`SecureArrayPacked`](@ref)
+"""
+Base.size(a::Union{PlainArrayPacked, SecureArrayPacked}) = a.shape
+
+# The remaining shape accessors mirror the unpacked ones, on the unpadded shape
+Base.size(a::Union{PlainArrayPacked, SecureArrayPacked}, d::Int) = a.shape[d]
+Base.length(a::Union{PlainArrayPacked, SecureArrayPacked}) = prod(a.shape)
+Base.ndims(a::Union{PlainArrayPacked, SecureArrayPacked}) = length(a.shape)
+
+"""
+    capacity(a::Union{PlainArrayPacked, SecureArrayPacked})
+
+Return the number of slots the packed storage of `a` occupies. Packing fills its storage
+completely, so this is also the length of the underlying array.
+
+See also: [`length`](@ref), [`PlainArrayPacked`](@ref), [`SecureArrayPacked`](@ref)
+"""
+capacity(a::Union{PlainArrayPacked, SecureArrayPacked}) = capacity(a.array)
+
+# Length of one padded block, i.e. the period of the tiling.
+block_length(a::Union{PlainArrayPacked, SecureArrayPacked}) = prod(a.padded_shape)
+
+# Number of times the padded block is repeated in the storage.
+n_tiles(a::Union{PlainArrayPacked, SecureArrayPacked}) = capacity(a) ÷ block_length(a)
+
+# `shape` with trailing dimensions of length one appended or dropped to make it
+# `M`-dimensional.
+pad_shape(shape::NTuple{N, Int}, M::Integer) where N = ntuple(i -> i <= N ? shape[i] : 1, M)
+
+"""
+    reshape(a::Union{PlainArrayPacked, SecureArrayPacked}, shape)
+
+Return a packed array with the same data but a different shape. Only shapes that append or
+drop trailing dimensions of length one are allowed, since any other reshape would have to
+re-pad the data. In particular, a packed vector can be viewed as a packed `d×1` matrix.
+
+See also: [`PlainArrayPacked`](@ref), [`SecureArrayPacked`](@ref)
+"""
+function Base.reshape(a::Union{PlainArrayPacked, SecureArrayPacked},
+                      shape::NTuple{M, Int}) where M
+    if prod(shape) != length(a) || shape != pad_shape(size(a), M)
+        throw(DimensionMismatch("new shape $(shape) is incompatible with packed array of " *
+                                "shape $(size(a))"))
+    end
+    # Only the metadata changes: appending or dropping trailing dimensions of length one
+    # leaves both the block length and the column-major data layout untouched
+    pack_result(a.array, shape, pad_shape(a.padded_shape, M))
+end
+
+Base.reshape(a::Union{PlainArrayPacked, SecureArrayPacked}, dims::Int...) = reshape(a, dims)
+
+"""
+    collect(a::PlainArrayPacked)
+
+Decode and return the real-valued data contained in `a`, cropped back to its unpadded shape.
+
+The padded block is laid out in Julia's column-major order, so the unpadded data is *not* a
+prefix of the flattened storage: it is the top-left sub-block of the padded block.
+
+See also: [`PlainArrayPacked`](@ref)
+"""
+function Base.collect(a::PlainArrayPacked)
+    flat = vec(collect(a.array))
+    padded = Base.reshape(view(flat, 1:block_length(a)), a.padded_shape)
+    Array{Float64, ndims(a)}(padded[map(Base.OneTo, a.shape)...])
+end
+
+Base.show(io::IO, a::PlainArrayPacked) = print(io, collect(a))
+
+function Base.show(io::IO, ::MIME"text/plain", a::PlainArrayPacked)
+    print(io, a.shape, "-shaped PlainArrayPacked{", backend_name(a), "} (padded to ",
+          a.padded_shape, "):\n")
+    Base.print_matrix(io, collect(a))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", a::SecureArrayPacked)
+    print(io, a.shape, "-shaped SecureArrayPacked{", backend_name(a), "} (padded to ",
+          a.padded_shape, ")")
+end
+
 # Get wrapper name of a potentially parametric type
 # Copied from: https://github.com/ClapeyronThermo/Clapeyron.jl/blob/f40c282e2236ff68d91f37c39b5c1e4230ae9ef0/src/utils/core_utils.jl#L17
 # Original source: https://github.com/JuliaArrays/ArrayInterface.jl/blob/40d9a87be07ba323cca00f9e59e5285c13f7ee72/src/ArrayInterface.jl#L20
@@ -225,4 +433,5 @@ __parameterless_type(T) = Base.typename(T).wrapper
 
 # Convenience method for getting human-readable names
 backend_name(x::Union{SecureContext{T}, SecureArray{T}, PlainArray{T}, PrivateKey{T},
-                      PublicKey{T}}) where T = string(__parameterless_type(T))
+                      PublicKey{T}, SecureArrayPacked{T},
+                      PlainArrayPacked{T}}) where T = string(__parameterless_type(T))
