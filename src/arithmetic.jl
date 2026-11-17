@@ -160,14 +160,67 @@ function Base.circshift(pa::PlainArray, shifts)
 end
 
 
+############################################################################################
+# Packed arrays
+############################################################################################
+
+# Element-wise ops forward to the inner array and keep the packed metadata. Operands must
+# agree on both the unpadded and the padded shape, so the zero padding stays zero and the
+# tiling period is unchanged.
+function packed_elementwise(op, a::AnyArrayPacked, b::AnyArrayPacked)
+    if size(a) != size(b)
+        throw(DimensionMismatch("shapes $(size(a)) and $(size(b)) do not match"))
+    end
+    if a.padded_shape != b.padded_shape
+        throw(DimensionMismatch("padded shapes $(a.padded_shape) and $(b.padded_shape) do not match"))
+    end
+    pack_result(op(a.array, b.array), size(a), a.padded_shape)
+end
+
+Base.:+(a::AnyArrayPacked{B, N}, b::AnyArrayPacked{B, N}) where {B, N} = packed_elementwise(+, a, b)
+Base.:-(a::AnyArrayPacked{B, N}, b::AnyArrayPacked{B, N}) where {B, N} = packed_elementwise(-, a, b)
+Base.:-(a::AnyArrayPacked) = pack_result(-a.array, size(a), a.padded_shape)
+
+# Scaling is safe: it leaves the zero padding zero and the tiling intact. Adding a scalar
+# would fill the padding, which a later packed matrix multiplication relies on being zero,
+# so it is deliberately not defined.
+Base.:*(a::AnyArrayPacked, scalar::Real) = pack_result(a.array * scalar, size(a), a.padded_shape)
+Base.:*(scalar::Real, a::AnyArrayPacked) = a * scalar
+
+Base.Broadcast.BroadcastStyle(::Type{<:PlainArrayPacked}) = SecureArrayStyle()
+Base.Broadcast.BroadcastStyle(::Type{<:SecureArrayPacked}) = SecureArrayStyle()
+Base.Broadcast.broadcastable(a::PlainArrayPacked) = a
+Base.Broadcast.broadcastable(a::SecureArrayPacked) = a
+
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(+), a::AnyArrayPacked{B, N}, b::AnyArrayPacked{B, N}) where {B, N} = packed_elementwise(+, a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(-), a::AnyArrayPacked{B, N}, b::AnyArrayPacked{B, N}) where {B, N} = packed_elementwise(-, a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::AnyArrayPacked{B, N}, b::AnyArrayPacked{B, N}) where {B, N} = packed_elementwise((x, y) -> x .* y, a, b)
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), a::AnyArrayPacked, scalar::Real) = a * scalar
+@inline Base.Broadcast.broadcasted(::SecureArrayStyle, ::typeof(*), scalar::Real, a::AnyArrayPacked) = a * scalar
+
 # Matrix Multiplication
 # For matrices in column-major order, we have to swap the arguments order
-Base.:*(sm1::SecureMatrix{B, N}, sm2::SecureMatrix{B, N}) where {B, N} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
-Base.:*(sm1::PlainMatrix{B}, sm2::SecureMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
-Base.:*(sm1::SecureMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1) 
-Base.:*(sm1::PlainMatrix{B}, sm2::PlainMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
-# d×d-Matrix * d-Vector can be treated as d×d-Matrix * d×1-Matrix, where l=1 divides d
-Base.:*(sm::SecureMatrix{B, N}, sv::SecureVector{B, N}) where {B, N} = SecureArithmetic.row_mat_times_mat(reshape(sv, (length(sv), 1)), sm)
-Base.:*(sm::PlainMatrix{B}, sv::SecureVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(sv, (length(sv), 1)), sm)
-Base.:*(sm::SecureMatrix{B}, pv::PlainVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(pv, (length(pv), 1)), sm) 
-Base.:*(sm::PlainMatrix{B}, pv::PlainVector{B}) where {B} = SecureArithmetic.row_mat_times_mat(reshape(pv, (length(pv), 1)), sm)
+# Matrix multiplication always runs on the packed layout, 
+# so a pair of flat operands is packed with `as_packed` on the way in and unpacked again
+# with `as_unpacked` on the way out. This is still cheaper than the jiang algorithm on flat arrays directly
+Base.:*(sm1::AnyPackedMatrix{B}, sm2::AnyPackedMatrix{B}) where {B} = SecureArithmetic.row_mat_times_mat(sm2, sm1)
+Base.:*(sm1::AnyFlatMatrix{B}, sm2::AnyFlatMatrix{B}) where {B} = as_unpacked(SecureArithmetic.row_mat_times_mat(as_packed(sm2), as_packed(sm1)))
+# d×d-Matrix * d-Vector is computed as d×d-Matrix * d×1-Matrix, where l=1 divides d, and the
+# reshape is undone on the way out so that a vector operand gives a vector back, as in Base.
+Base.:*(sm::AnyPackedMatrix{B}, sv::AnyPackedVector{B}) where {B} = reshape(SecureArithmetic.row_mat_times_mat(reshape(sv, (length(sv), 1)), sm), (length(sv),))
+Base.:*(sm::AnyFlatMatrix{B}, sv::AnyFlatVector{B}) where {B} = as_unpacked(reshape(SecureArithmetic.row_mat_times_mat(reshape(as_packed(sv), (length(sv), 1)), as_packed(sm)), (length(sv),)))
+
+# Mixing the layouts in one product is not supported, the implicit conversion would hide a multiplicative level. 
+# Spelled out as methods rather than left to fall through, so that the error says what to do instead of being a
+# bare `MethodError`.
+@noinline function mixed_layout_error(a, b)
+    throw(ArgumentError("cannot multiply a packed and a flat operand ($(typeof(a)) and " *
+                        "$(typeof(b))): both operands of `*` must be in the same layout. " *
+                        "Pack the flat one with `PlainArrayPacked`/`SecureArrayPacked`, or " *
+                        "unpack the packed one with `PlainArray`/`SecureArray`."))
+end
+
+Base.:*(a::AnyPackedMatrix{B}, b::AnyFlatMatrix{B}) where {B} = mixed_layout_error(a, b)
+Base.:*(a::AnyFlatMatrix{B}, b::AnyPackedMatrix{B}) where {B} = mixed_layout_error(a, b)
+Base.:*(a::AnyPackedMatrix{B}, b::AnyFlatVector{B}) where {B} = mixed_layout_error(a, b)
+Base.:*(a::AnyFlatMatrix{B}, b::AnyPackedVector{B}) where {B} = mixed_layout_error(a, b)

@@ -6,6 +6,8 @@ using Serialization: Serialization
 # Basic types
 export SecureContext, SecureVector, PlainVector, PlainMatrix, SecureMatrix,
        PlainArray, SecureArray
+export PlainArrayPacked, SecureArrayPacked, PlainVectorPacked, PlainMatrixPacked,
+       SecureVectorPacked, SecureMatrixPacked
 
 # Keys
 export PrivateKey, PublicKey
@@ -16,6 +18,7 @@ export Unencrypted, OpenFHEBackend
 # Crypto operations
 export generate_keys, init_multiplication!, init_rotation!, init_bootstrapping!
 export init_matrix_multiplication!
+export init_packing!, init_unpacking!
 export encrypt, decrypt, decrypt!, bootstrap!
 
 # Query crypto objects

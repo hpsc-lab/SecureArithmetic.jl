@@ -301,6 +301,35 @@ function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBa
         SecureArray(new_data, (n,), n_ct_needed * batch_size, a.context)
 end
 
+# Number of slots in a single plaintext/ciphertext of `context`. Must agree with the
+# `capacity` computed in the `PlainArray` constructor above, otherwise the packed layout
+# would not fill its storage exactly.
+function slot_count(context::SecureContext{<:OpenFHEBackend})
+    cc = get_crypto_context(context)
+    Int(OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc)))
+end
+
+# Repeat the whole storage of `a` `factor` times. Since `a` already fills its storage with
+# whole tiles, this extends the tiling without performing a single homomorphic operation.
+function replicate_storage(a::SecureArray{<:OpenFHEBackend, 1}, factor::Integer)
+    factor == 1 && return a
+    data = OpenFHE.Ciphertext[]
+    for _ in 1:factor, ciphertext in a.data
+        push!(data, OpenFHE.Clone(ciphertext))
+    end
+    SecureArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
+end
+
+function replicate_storage(a::PlainArray{<:OpenFHEBackend, 1}, factor::Integer)
+    factor == 1 && return a
+    cc = get_crypto_context(a)
+    data = OpenFHE.Plaintext[]
+    for _ in 1:factor, plaintext in a.data
+        push!(data, clone_data(cc, plaintext))
+    end
+    PlainArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
+end
+
 function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
     print(io, collect(pa))
 end
@@ -607,7 +636,15 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     sv_new = similar(sa.data)
     # rotation index for individual ciphertexts
     rotation_index = shift - vec_capacity * shift1
-    
+
+    # When the array fills its ciphertexts exactly and the shift is a whole multiple of one
+    # ciphertext length, the rotation is just a cyclic permutation of the ciphertexts: no slot moves
+    # within a ciphertext, so no masking is needed. The general path below would still
+    # multiply by an all-zero and an all-one mask here and pay a multiplicative level for it.
+    if empty_slots == 0 && rotation_index == 0
+        return SecureArray(circshift(sa.data, shift1), size(sa), capacity(sa), sa.context)
+    end
+
     # first shift1 ciphertexts have to be rotated by rotation_index
     @threaded for i in 1:shift1
         sv[i] = OpenFHE.EvalRotate(cc, circshift(sa.data, shift1)[i], -rotation_index)
