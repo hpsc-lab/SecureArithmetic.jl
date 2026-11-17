@@ -12,7 +12,7 @@
 function compute_matrix_multiplication_shifts(d::Integer, l::Integer)
     shifts = Int[]
     r = d ÷ l
-    p = Int(log2(r)) # since d and l are alawys padded to a power of two, d÷l is also a power of two
+    p = Int(log2(r)) # since d and l are always padded to a power of two, d÷l is also a power of two
 
     # Step 1-1: linear transformation sigma on Ā
     for k in -d+1:d-1
