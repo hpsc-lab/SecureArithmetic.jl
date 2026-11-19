@@ -301,6 +301,35 @@ function resize(a::Union{PlainVector{<:OpenFHEBackend}, SecureVector{<:OpenFHEBa
         SecureArray(new_data, (n,), n_ct_needed * batch_size, a.context)
 end
 
+# Number of slots in a single plaintext/ciphertext of `context`. Must agree with the
+# `capacity` computed in the `PlainArray` constructor above, otherwise the packed layout
+# would not fill its storage exactly.
+function slot_count(context::SecureContext{<:OpenFHEBackend})
+    cc = get_crypto_context(context)
+    Int(OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc)))
+end
+
+# Repeat the whole storage of `a` `factor` times. Since `a` already fills its storage with
+# whole tiles, this extends the tiling without performing a single homomorphic operation.
+function replicate_storage(a::SecureArray{<:OpenFHEBackend, 1}, factor::Integer)
+    factor == 1 && return a
+    data = OpenFHE.Ciphertext[]
+    for _ in 1:factor, ciphertext in a.data
+        push!(data, OpenFHE.Clone(ciphertext))
+    end
+    SecureArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
+end
+
+function replicate_storage(a::PlainArray{<:OpenFHEBackend, 1}, factor::Integer)
+    factor == 1 && return a
+    cc = get_crypto_context(a)
+    data = OpenFHE.Plaintext[]
+    for _ in 1:factor, plaintext in a.data
+        push!(data, clone_data(cc, plaintext))
+    end
+    PlainArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
+end
+
 function Base.show(io::IO, pa::PlainArray{<:OpenFHEBackend})
     print(io, collect(pa))
 end
@@ -607,7 +636,15 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     sv_new = similar(sa.data)
     # rotation index for individual ciphertexts
     rotation_index = shift - vec_capacity * shift1
-    
+
+    # When the array fills its ciphertexts exactly and the shift is a whole multiple of one
+    # ciphertext length, the rotation is just a cyclic permutation of the ciphertexts: no slot moves
+    # within a ciphertext, so no masking is needed. The general path below would still
+    # multiply by an all-zero and an all-one mask here and pay a multiplicative level for it.
+    if empty_slots == 0 && rotation_index == 0
+        return SecureArray(circshift(sa.data, shift1), size(sa), capacity(sa), sa.context)
+    end
+
     # first shift1 ciphertexts have to be rotated by rotation_index
     @threaded for i in 1:shift1
         sv[i] = OpenFHE.EvalRotate(cc, circshift(sa.data, shift1)[i], -rotation_index)
@@ -689,23 +726,31 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
         # mask for the rest elements
         mask5 = OpenFHE.MakeCKKSPackedPlaintext(cc, 1 .- mask4)
         mask4 = OpenFHE.MakeCKKSPackedPlaintext(cc, mask4)
-        # short ciphertext is a combination of first rotation_index elements of previous ciphertext,
-        # last n_shift elements of the next ciphertext, and itself
-        sv_new[shift1] = OpenFHE.EvalAdd(cc,
-                                         OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
-                                                         OpenFHE.EvalMult(cc, sv[shift1], mask3)),
-                                         OpenFHE.EvalMult(cc, circshift(sv, -1)[shift1], mask4))
-        # All ciphertexts after the short one upto prelast ciphertext
-        # become last n_shift elements from the next ciphertext
-        @threaded for i in shift1+1:length(sv)-2
-            sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i+1], mask4),
-                                        OpenFHE.EvalMult(cc, sv[i], mask5))
-        end
         # last ciphertext is rotated due to empty slots
         sv_new[end] = OpenFHE.EvalRotate(cc, sv[end], -short_length)
-        # prelast becomes n_shift elements from the last ciphertext
-        # from positions rotation_index+1:rotation_index+n_shift
-        sv_new[end-1] =  OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv_new[end], mask4), OpenFHE.EvalMult(cc, sv[end-1], mask5))
+        # short ciphertext is a combination of first rotation_index elements of previous ciphertext,
+        # last n_shift elements of the next ciphertext, and itself
+        if shift1 == length(sv) - 1
+            # short ciphertext is also the prelast: use already-rotated last ciphertext
+            sv_new[shift1] = OpenFHE.EvalAdd(cc,
+                                             OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
+                                                             OpenFHE.EvalMult(cc, sv[shift1], mask3)),
+                                             OpenFHE.EvalMult(cc, sv_new[end], mask4))
+        else
+            sv_new[shift1] = OpenFHE.EvalAdd(cc,
+                                             OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, circshift(sv, 1)[shift1], mask1),
+                                                             OpenFHE.EvalMult(cc, sv[shift1], mask3)),
+                                             OpenFHE.EvalMult(cc, circshift(sv, -1)[shift1], mask4))
+            # All ciphertexts after the short one upto prelast ciphertext
+            # become last n_shift elements from the next ciphertext
+            @threaded for i in shift1+1:length(sv)-2
+                sv_new[i] = OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv[i+1], mask4),
+                                            OpenFHE.EvalMult(cc, sv[i], mask5))
+            end
+            # prelast becomes n_shift elements from the last ciphertext
+            # from positions rotation_index+1:rotation_index+n_shift
+            sv_new[end-1] =  OpenFHE.EvalAdd(cc, OpenFHE.EvalMult(cc, sv_new[end], mask4), OpenFHE.EvalMult(cc, sv[end-1], mask5))
+        end
     end
 
     SecureArray(sv_new, size(sa), capacity(sa), sa.context)
