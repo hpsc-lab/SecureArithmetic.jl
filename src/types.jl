@@ -237,6 +237,11 @@ Packing does two things to the data:
 2. the resulting block is *tiled*, i.e. repeated, so that it fills the underlying storage
    completely (`length == capacity`).
 
+A dimension longer than `max_block_size` is cut into blocks of that size instead, each of
+which is padded and tiled as above and fills one ciphertext of its own. `padded_shape` is then
+the padded shape of one block, and the blocks are stored one after another, in column-major
+order of the block grid.
+
 Together they make a rotation of the packed array a plain, level-free rotation of the
 underlying ciphertext: the block length divides the slot count exactly, so the wrap-around of
 a block-cyclic shift is supplied by the neighbouring tile. An unpacked [`PlainArray`](@ref)
@@ -367,8 +372,17 @@ capacity(a::Union{PlainArrayPacked, SecureArrayPacked}) = capacity(a.array)
 # Length of one padded block, i.e. the period of the tiling.
 block_length(a::Union{PlainArrayPacked, SecureArrayPacked}) = prod(a.padded_shape)
 
-# Number of times the padded block is repeated in the storage.
-n_tiles(a::Union{PlainArrayPacked, SecureArrayPacked}) = capacity(a) ÷ block_length(a)
+# Number of blocks per dimension
+block_grid(shape, padded_shape) = cld.(shape, padded_shape)
+block_grid(a::Union{PlainArrayPacked, SecureArrayPacked}) = block_grid(a.shape, a.padded_shape)
+# Total number of blocks
+n_blocks(a::Union{PlainArrayPacked, SecureArrayPacked}) = prod(block_grid(a))
+
+# Length of the storage of one block, which holds its tiles.
+block_storage(a::Union{PlainArrayPacked, SecureArrayPacked}) = capacity(a) ÷ n_blocks(a)
+
+# Number of times the padded block is repeated in the storage of each block.
+n_tiles(a::Union{PlainArrayPacked, SecureArrayPacked}) = block_storage(a) ÷ block_length(a)
 
 # `shape` with trailing dimensions of length one appended or dropped to make it
 # `M`-dimensional.
@@ -408,6 +422,17 @@ See also: [`PlainArrayPacked`](@ref)
 """
 function Base.collect(a::PlainArrayPacked)
     flat = vec(collect(a.array))
+    if n_blocks(a) > 1
+        # Every block is the top-left sub-block of its padded block, at the start of its storage
+        grid = block_grid(a)
+        full = zeros(Float64, grid .* a.padded_shape)
+        for (b, g) in enumerate(CartesianIndices(grid))
+            first = (b - 1) * block_storage(a)
+            block = Base.reshape(view(flat, first+1:first+block_length(a)), a.padded_shape)
+            full[map((i, p) -> (i-1)*p+1:i*p, Tuple(g), a.padded_shape)...] = block
+        end
+        return full[map(Base.OneTo, a.shape)...]
+    end
     padded = Base.reshape(view(flat, 1:block_length(a)), a.padded_shape)
     Array{Float64, ndims(a)}(padded[map(Base.OneTo, a.shape)...])
 end

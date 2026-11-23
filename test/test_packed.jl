@@ -43,9 +43,13 @@ batch_size(context) = SecureArithmetic.slot_count(context)
         @testset "$backend_name" begin
             slots = batch_size(context)
 
-            # Padding rounds every dimension up to the next power of two
-            for (shape, padded) in (((4, 4), (4, 4)), ((5, 5), (8, 8)), ((6, 3), (8, 4)),
-                                    ((17, 17), (32, 32)), ((3,), (4,)), ((1, 1), (1, 1)))
+            # Padding rounds every dimension up to the next power of two. On OpenFHE, the batch
+            # size of 16 cuts every dimension longer than 4 into blocks of 4
+            blocked = backend_name == "OpenFHEBackend"
+            for (shape, padded) in (((4, 4), (4, 4)), ((5, 5), blocked ? (4, 4) : (8, 8)),
+                                    ((6, 3), blocked ? (4, 4) : (8, 4)),
+                                    ((17, 17), blocked ? (4, 4) : (32, 32)), ((3,), (4,)),
+                                    ((1, 1), (1, 1)))
                 a = PlainArrayPacked(ones(shape...), context)
                 @test size(a) == shape
                 @test a.padded_shape == padded
@@ -53,8 +57,9 @@ batch_size(context) = SecureArithmetic.slot_count(context)
                 @test length(a) == prod(shape)
                 # The packed storage is always filled exactly, never partially
                 @test capacity(a) == length(a.array)
-                @test capacity(a) == SecureArithmetic.n_tiles(a) * prod(padded)
-                @test capacity(a) == max(slots, prod(padded))
+                @test capacity(a) == SecureArithmetic.n_blocks(a) * SecureArithmetic.n_tiles(a) *
+                                     prod(padded)
+                @test capacity(a) == SecureArithmetic.n_blocks(a) * max(slots, prod(padded))
             end
 
             # `collect` crops back to the unpadded shape. The padded block is column-major,
@@ -157,12 +162,10 @@ end
     for (d, l) in [(2, 1),   # D^2 = 4  < 16, padded block tiled several times
                    (4, 2),   # D^2 = 16 == 16, exactly one copy
                    (4, 1),   # exact fit, matrix times vector
-                   (8, 2),   # D^2 = 64 >  16, several ciphertexts
-                   (8, 1),   # several ciphertexts, matrix times vector
-                   (6, 3)]   # padded to 8x8 * 8x4, several ciphertexts
+                   (8, 2),   # 2x2 blocks of 4x4 * 2x1 blocks of 4x2
+                   (8, 1),   # several blocks, matrix times vector
+                   (6, 3)]   # padded to 2x2 blocks of 4x4 * 2x1 blocks of 4x4
         @testset "$(d)x$(d) * $(d)x$(l)" begin
-            # The multi-ciphertext regime masks its rotations, so a chained product costs up
-            # to 10 levels here
             (context, public_key, private_key) = make_context(; depth = 12)
 
             # The default scaling modulus leaves only ~2 of headroom in the last modulus of
@@ -183,10 +186,10 @@ end
             # Every tile of the padded block holds the same data, i.e. the block is still a
             # faithful tile of the result
             storage = vec(collect(decrypt(result.array, private_key)))
-            tiles = reshape(storage, prod(result.padded_shape), :)
+            tiles = reshape(storage, prod(result.padded_shape), :, SecureArithmetic.n_blocks(result))
             @test size(tiles, 2) == SecureArithmetic.n_tiles(result)
-            for j in axes(tiles, 2)
-                @test tiles[:, j] ≈ tiles[:, 1]
+            for b in axes(tiles, 3), j in axes(tiles, 2)
+                @test tiles[:, j, b] ≈ tiles[:, 1, b]
             end
 
             # ... so the result serves as an operand of another packed product
@@ -230,7 +233,7 @@ end
             @test sm * sv isa SecureVectorPacked
             @test pm * pv isa PlainVectorPacked
             @test size(sm * sv) == (d,)
-            @test (sm * sv).padded_shape == (SecureArithmetic.next_power_of_two(d),)
+            @test (sm * sv).padded_shape == (min(SecureArithmetic.next_power_of_two(d), 4),)
 
             release_context_memory()
             GC.gc()
@@ -458,20 +461,20 @@ end
 # conversion performs but `compute_packing_shifts` does not report makes these tests fail -
 # the same guard that `packed_mat_mat_mul` provides for the multiplication kernel.
 @testset verbose=true showtiming=true "repacking an encrypted array" begin
-    # The batch size is 16, so the shapes below cover all three storage regimes. The expected
+    # The batch size is 16, so dimensions longer than 4 are cut into blocks. The expected
     # level is what OpenFHE *reports*: under FLEXIBLEAUTO the rescale of a multiplication is
     # deferred to the next one, so `level` lags the consumed depth by one. The conversion
-    # performs at most one multiplication in the first group and two in the second, where the
-    # padded block spans several ciphertexts and the rotations are masked as well.
+    # performs at most one multiplication: every block lives in a ciphertext of its own, so no
+    # rotation is masked.
     for (shape, want_level) in [((4, 4), 0),   # fast path: already a packed block
-                                ((8, 2), 0),   # fast path, rectangular
-                                ((16,), 0),    # fast path, vector
+                                ((8, 2), 0),   # 2x1 blocks of 4x2
+                                ((16,), 0),    # vector, 4 blocks
                                 ((4, 2), 0),   # D == d, tiled, so mask but no rotation
                                 ((3, 3), 0),   # D > d, single ciphertext
-                                ((5, 2), 0),   # D > d, exact fit
-                                ((6,), 0),     # vector, padded
-                                ((6, 4), 1),   # D > d, several ciphertexts: masked rotations
-                                ((5, 5), 1)]   # D > d, several ciphertexts
+                                ((5, 2), 0),   # 2x1 blocks of 4x2
+                                ((6,), 0),     # vector, 2 blocks
+                                ((6, 4), 0),   # 2x1 blocks of 4x4
+                                ((5, 5), 0)]   # 2x2 blocks of 4x4
         @testset "$shape" begin
             Random.seed!(3141)
             (context, public_key, private_key) = make_context()
@@ -490,7 +493,8 @@ end
             @test size(packed) == shape
             @test packed.padded_shape == reference.padded_shape
             @test capacity(packed) == length(packed.array)
-            @test capacity(packed) == SecureArithmetic.n_tiles(packed) *
+            @test capacity(packed) == SecureArithmetic.n_blocks(packed) *
+                                      SecureArithmetic.n_tiles(packed) *
                                       prod(packed.padded_shape)
             @test capacity(packed) == capacity(reference)
 
@@ -499,10 +503,10 @@ end
             storage = vec(collect(decrypt(packed.array, private_key)))
             @test storage ≈ vec(collect(reference.array))
 
-            tiles = reshape(storage, prod(packed.padded_shape), :)
+            tiles = reshape(storage, prod(packed.padded_shape), :, SecureArithmetic.n_blocks(packed))
             @test size(tiles, 2) == SecureArithmetic.n_tiles(packed)
-            for j in axes(tiles, 2)
-                @test tiles[:, j] ≈ tiles[:, 1]
+            for b in axes(tiles, 3), j in axes(tiles, 2)
+                @test tiles[:, j, b] ≈ tiles[:, 1, b]
             end
 
             @test level(packed) == want_level
@@ -618,20 +622,20 @@ end
 @testset verbose=true showtiming=true "unpacking an encrypted array" begin
     # The batch size is 16. Unpacking is a pure relabelling whenever the unpadded data already
     # is a contiguous prefix of the padded block, i.e. when the first dimension needs no padding
-    # and for any vector; otherwise it masks, which costs a level, plus a second one when the
-    # padded block spans several ciphertexts and the rotations have to be masked as well. As
-    # above, the expected level is what OpenFHE *reports*, which lags the consumed depth by one
-    # under FLEXIBLEAUTO.
+    # and for any vector; otherwise it masks, which costs a level - also with several blocks,
+    # because every block lives in a ciphertext of its own and no rotation is masked. As above,
+    # the expected level is what OpenFHE *reports*, which lags the consumed depth by one under
+    # FLEXIBLEAUTO.
     for (shape, want_level) in [((4, 4), 0),   # relabelling: no padding at all
-                                ((8, 2), 0),   # relabelling: D == d, rectangular
-                                ((16,), 0),    # relabelling: vector, no padding
-                                ((6,), 0),     # relabelling: vector, padded
+                                ((8, 2), 0),   # 2x1 blocks of 4x2
+                                ((16,), 0),    # vector, 4 blocks
+                                ((6,), 0),     # vector, 2 blocks
                                 ((4, 2), 0),   # relabelling: D == d, tiled
                                 ((3, 1), 0),   # relabelling: single run, d x 1
                                 ((3, 3), 0),   # D > d, single ciphertext: masked, level-free
-                                ((5, 2), 0),   # D > d, exact fit
-                                ((5, 5), 1),   # D > d, several ciphertexts: masked rotations
-                                ((6, 4), 1)]   # D > d, several ciphertexts, rectangular
+                                ((5, 2), 0),   # 2x1 blocks of 4x2
+                                ((5, 5), 0),   # 2x2 blocks of 4x4
+                                ((6, 4), 0)]   # 2x1 blocks of 4x4, rectangular
         @testset "$shape" begin
             Random.seed!(3141)
             (context, public_key, private_key) = make_context()

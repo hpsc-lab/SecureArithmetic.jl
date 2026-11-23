@@ -124,18 +124,20 @@ See also: [`PlainArrayPacked`](@ref), [`SecureArrayPacked`](@ref), [`encrypt`](@
 """
 function PlainArrayPacked(data::Array{<:Real}, context::SecureContext)
     shape = size(data)
-    padded_shape = ntuple(i -> next_power_of_two(shape[i]), ndims(data))
-    block = prod(padded_shape)
     slots = slot_count(context)
-    check_packed_tiling(block, slots)
+    padded_shape, block, _ = packed_layout(shape, slots)
+    grid = block_grid(shape, padded_shape)
 
     # Pad the *array*, not the flattened data. The original data occupies the top-left sub-block rather than a prefix.
-    # I.e. both columns and rows can be padded
-    padded = zeros(Float64, padded_shape)
+    # I.e. both columns and rows can be padded. With several blocks, every block is the top-left
+    # sub-block of its own padded block.
+    padded = zeros(Float64, grid .* padded_shape)
     padded[map(Base.OneTo, shape)...] = data
 
     tiles = max(1, slots ÷ block)
-    PlainArrayPacked(PlainArray(repeat(vec(padded), tiles), context),
+    blocks = [repeat(vec(padded[map((i, p) -> (i-1)*p+1:i*p, Tuple(g), padded_shape)...]), tiles)
+              for g in CartesianIndices(grid)]
+    PlainArrayPacked(PlainArray(reduce(vcat, vec(blocks)), context),
                      shape, padded_shape)
 end
 
@@ -159,14 +161,51 @@ PlainVectorPacked(data::Vector{<:Real}, context::SecureContext) =
 # Repacking an array that is already encoded or encrypted
 ############################################################################################
 
-# The packed layout of `shape`: every dimension rounded up to the next power of two,
-# the length of one such block, and the storage a packed array of that block fills.
+"""
+    max_block_size(slots)
+
+The length up to which a dimension of a packed array is kept in one block: the largest power
+of two `t` with `t² <= slots`, so that a `t×t` block fits a single ciphertext. A longer
+dimension is cut into blocks of length `t`, which keeps every rotation of a matrix product
+inside one ciphertext. The `Unencrypted` backend has a single slot per container and no
+ciphertext limit, so it never blocks.
+"""
+max_block_size(slots::Integer) = slots == 1 ? typemax(Int) : prevpow(2, isqrt(slots))
+
+# The packed layout of `shape`: every dimension rounded up to the next power of two, or to
+# `max_block_size` if it is longer, the length of one such block, and the storage the block
+# fills.
 function packed_layout(shape::NTuple{N, Int}, slots::Integer) where N
-    padded_shape = ntuple(i -> next_power_of_two(shape[i]), N)
+    padded_shape = ntuple(i -> min(next_power_of_two(shape[i]), max_block_size(slots)), N)
     block = prod(padded_shape)
     check_packed_tiling(block, slots)
+    if block > slots && any(block_grid(shape, padded_shape) .> 1)
+        throw(ArgumentError("a block of $padded_shape does not fit the $slots slots of one " *
+                            "ciphertext, which several blocks require"))
+    end
 
     (padded_shape, block, max(slots, block))
+end
+
+# The runs of slots that move between the flat layout of `shape`, whose storage is split into
+# ciphertexts of `slots` slots, and the blocks of a packed layout with several blocks. Every
+# block gets its runs grouped as `(source ciphertext, shift) => positions in that ciphertext`,
+# sorted to keep the operation order reproducible.
+function block_runs(shape::NTuple{N, Int}, padded_shape::NTuple{N, Int},
+                    slots::Integer) where N
+    grid = block_grid(shape, padded_shape)
+    blocks = LinearIndices(grid)
+    within = LinearIndices(padded_shape)
+    runs = [Dict{Tuple{Int, Int}, Vector{Int}}() for _ in 1:prod(grid)]
+    for (source, index) in enumerate(CartesianIndices(shape))
+        i = Tuple(index)
+        b = blocks[CartesianIndex(cld.(i, padded_shape))]
+        target = within[CartesianIndex(mod1.(i, padded_shape))] - 1
+        chunk, position = divrem(source - 1, slots)
+        push!(get!(Vector{Int}, runs[b], (chunk + 1, target - position)), position)
+    end
+
+    [sort!(collect(r), by = first) for r in runs]
 end
 
 # How an unpacked array of `shape` maps onto the packed block of `padded_shape`.
@@ -204,9 +243,17 @@ end
 function compute_packing_shifts(shape::NTuple{N, Int},
                                 padded_shape::NTuple{N, Int}, storage::Integer) where N
     shifts = Int[]
-    for (shift, _) in packing_runs(shape, padded_shape)
-        if shift != 0
-            push!(shifts, shift)
+    if prod(block_grid(shape, padded_shape)) > 1
+        for runs in block_runs(shape, padded_shape, storage), ((_, shift), _) in runs
+            if shift != 0
+                push!(shifts, shift)
+            end
+        end
+    else
+        for (shift, _) in packing_runs(shape, padded_shape)
+            if shift != 0
+                push!(shifts, shift)
+            end
         end
     end
 
@@ -255,6 +302,30 @@ function SecureArrayPacked(secure_array::SecureArray)
     if shape == padded_shape && length(secure_array) == storage &&
        capacity(secure_array) == storage
         return SecureArrayPacked(reshape(secure_array, (storage,)), shape, padded_shape)
+    end
+
+    # Several blocks: every block is assembled from masked and rotated runs of the ciphertexts
+    # of the source, each block in a ciphertext of its own, so no rotation crosses ciphertexts
+    # and the conversion costs one level, just like a single block.
+    if prod(block_grid(shape, padded_shape)) > 1
+        n = length(secure_array)
+        flat = resize(reshape(secure_array, (n,)), cld(n, storage) * storage)
+        blocks = map(block_runs(shape, padded_shape, storage)) do runs
+            pieces = map(runs) do ((chunk, shift), positions)
+                keep = falses(storage)
+                keep[positions .+ 1] .= true
+                mask = PlainArray([keep[i] ? 1 : 0 for i in 1:storage], context)
+                circshift(storage_chunk(flat, chunk) .* mask, shift)
+            end
+            packed = reduce(+, pieces)
+            tile_shift = block
+            while tile_shift < storage
+                packed += circshift(packed, tile_shift)
+                tile_shift *= 2
+            end
+            packed
+        end
+        return SecureArrayPacked(join_storage(blocks), shape, padded_shape)
     end
 
     # `resize` does not zero the slots it adds, it clones the first ciphertext, and the
@@ -314,12 +385,20 @@ as_packed(a::SecureArray) = SecureArrayPacked(a)
 
 # The `circshift` amounts that `SecureArray(::SecureArrayPacked)` applies to the flattened
 # storage: the inverses of the non-zero run shifts of the packing conversion. Unlike
-# `compute_packing_shifts` this needs no `storage`, because the tiling is not undone - the data
-# is simply cropped - so there are no doubling shifts here. Must be kept in sync with that
-# constructor.
+# `compute_packing_shifts` there are no doubling shifts here, because the tiling is not undone -
+# the data is simply cropped. `storage` only locates the runs of several blocks. Must be kept in
+# sync with that constructor.
 function compute_unpacking_shifts(shape::NTuple{N, Int},
-                                  padded_shape::NTuple{N, Int}) where N
+                                  padded_shape::NTuple{N, Int}, storage::Integer) where N
     shifts = Int[]
+    if prod(block_grid(shape, padded_shape)) > 1
+        for runs in block_runs(shape, padded_shape, storage), ((_, shift), _) in runs
+            if shift != 0
+                push!(shifts, -shift)
+            end
+        end
+        return unique(shifts)
+    end
     for (shift, _) in packing_runs(shape, padded_shape)
         if shift != 0
             push!(shifts, -shift)
@@ -363,6 +442,24 @@ function SecureArray(secure_array::SecureArrayPacked)
     # one `init_unpacking!` derives its rotation keys for. The source is tiled with period
     # `prod(padded_shape)`, which divides both storages, so this only ever drops whole tiles and
     # leaves the tiling exact.
+    # Several blocks: every ciphertext of the flat result is assembled from masked and rotated
+    # runs of the blocks, each in a ciphertext of its own, which costs one level.
+    if n_blocks(secure_array) > 1
+        n = prod(shape)
+        chunks = [[] for _ in 1:cld(n, storage)]
+        for (b, runs) in enumerate(block_runs(shape, padded_shape, storage))
+            source = storage_chunk(secure_array.array, b)
+            for ((chunk, shift), positions) in runs
+                keep = falses(storage)
+                keep[mod.(positions .+ shift, storage) .+ 1] .= true
+                mask = PlainArray([keep[i] ? 1 : 0 for i in 1:storage], context)
+                push!(chunks[chunk], circshift(source .* mask, -shift))
+            end
+        end
+        unpacked = join_storage([reduce(+, pieces) for pieces in chunks])
+        return reshape(resize(unpacked, n), shape)
+    end
+
     flat = capacity(secure_array) == storage ? secure_array.array :
            resize(secure_array.array, storage)
 
@@ -439,7 +536,7 @@ function init_unpacking!(context::SecureContext, private_key::PrivateKey,
     end
     padded_shape, _, storage = packed_layout(shape, slot_count(context))
 
-    shifts = compute_unpacking_shifts(shape, padded_shape)
+    shifts = compute_unpacking_shifts(shape, padded_shape, storage)
     # The conversion performs no rotation at all, so there is nothing to generate. Calling
     # `init_rotation!` with an empty shift list would still generate one key, see
     # `compute_rotation_indices_1d`.

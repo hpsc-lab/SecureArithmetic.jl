@@ -309,6 +309,25 @@ function slot_count(context::SecureContext{<:OpenFHEBackend})
     Int(OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(cc)))
 end
 
+# The `i`-th ciphertext/plaintext of `a` as an array of its own. A packed array with several
+# blocks keeps every block in a ciphertext of its own, so this is how a block is accessed.
+function storage_chunk(a::Union{SecureArray{<:OpenFHEBackend, 1},
+                                PlainArray{<:OpenFHEBackend, 1}}, i::Integer)
+    n = slot_count(a.context)
+    a isa SecureArray ? SecureArray([a.data[i]], (n,), n, a.context) :
+                        PlainArray([a.data[i]], (n,), n, a.context)
+end
+
+# The inverse of `storage_chunk`: concatenate the ciphertexts/plaintexts of `parts`, which must
+# all be encrypted or all not.
+function join_storage(parts::AbstractVector)
+    a = first(parts)
+    data = reduce(vcat, [p.data for p in parts])
+    n = sum(capacity, parts)
+    a isa SecureArray ? SecureArray(data, (n,), n, a.context) :
+                        PlainArray(data, (n,), n, a.context)
+end
+
 # Repeat the whole storage of `a` `factor` times. Since `a` already fills its storage with
 # whole tiles, this extends the tiling without performing a single homomorphic operation.
 function replicate_storage(a::SecureArray{<:OpenFHEBackend, 1}, factor::Integer)
