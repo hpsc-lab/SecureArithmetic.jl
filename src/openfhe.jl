@@ -523,6 +523,14 @@ function rotate(sa::SecureArray{<:OpenFHEBackend, 1}, shift)
     sv_new = similar(sa.data)
     # rotation index for individual ciphertexts
     rotation_index = shift - vec_capacity * shift1
+
+    # When the array fills its ciphertexts exactly and the shift is a whole multiple of one
+    # ciphertext length, the rotation is just a cyclic permutation of the ciphertexts: no slot moves
+    # within a ciphertext, so no masking is needed. The general path below would still
+    # multiply by an all-zero and an all-one mask here and pay a multiplicative level for it.
+    if empty_slots == 0 && rotation_index == 0
+        return SecureArray(circshift(sa.data, shift1), size(sa), capacity(sa), sa.context)
+    end
     
     # first shift1 ciphertexts have to be rotated by rotation_index
     @threaded for i in 1:shift1
