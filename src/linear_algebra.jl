@@ -89,9 +89,9 @@ function init_matrix_multiplication!(context::SecureContext, private_key::Privat
         init_unpacking!(context, private_key, result_shape)
     end
 
-    # The algorithm runs on the padded dimensions, which are powers of two
-    d = next_power_of_two(d)
-    l = next_power_of_two(l)
+    # The algorithm runs on the padded dimensions of one block, which are powers of two
+    d = min(next_power_of_two(d), max_block_size(slot_count(context)))
+    l = min(next_power_of_two(l), max_block_size(slot_count(context)))
     if d % l != 0
         throw(DimensionMismatch("number of rows l=$l does not divide number of columns d=$d"))
     end
@@ -157,8 +157,17 @@ function row_mat_times_mat(sm1, sm2)
     # Ā then needs no repeated doubling at all: `sm1` is tiled with period l*d, so every
     # n = d² block of its storage already holds d/l copies of A. Bringing both operands onto
     # the common storage only repeats whole tiles, which costs no homomorphic operation.
-    sm1 = replicate_storage(sm1.array, storage ÷ capacity(sm1))
-    sm2 = replicate_storage(sm2.array, storage ÷ capacity(sm2))
+    #
+    # A matrix that is cut into several blocks is multiplied block-wise,
+    # C_ij = Σ_k A_ik * B_kj, where every block product is the algorithm below. Every rotation
+    # of the algorithm acts on a single operand, sigma and phi^k on `sm1`, tau and psi^k on
+    # `sm2`, so each block is transformed once and reused for every block product it is part of
+    blocks(a) = n_blocks(a) == 1 ? reshape([a.array], 1, 1) :
+                reshape([storage_chunk(a.array, b) for b in 1:n_blocks(a)], block_grid(a)...)
+    # In column order, `sm2 * sm1` is computed, so the result block (i, j) is the sum over k of
+    # the products of block (i, k) of `sm2` and block (k, j) of `sm1`
+    blocks1 = [replicate_storage(x, storage ÷ capacity(x)) for x in blocks(sm1)]
+    blocks2 = [replicate_storage(x, storage ÷ capacity(x)) for x in blocks(sm2)]
 
     # The masks are tiled with period n just like the data, so they are built from the
     # zero-based index *within* one block
@@ -166,37 +175,62 @@ function row_mat_times_mat(sm1, sm2)
 
     # Step 1-1
     # Compute linear Transformation sigma on Ā
-    sm1_sigma = PlainArray(zeros(storage), ctx)
+    function sigma(sm1)
+        sm1_sigma = PlainArray(zeros(storage), ctx)
 
-    for k in -d+1:d-1
-        if k >= 0
-            u_k_sigma = PlainArray([0 <= i-d*k && i-d*k < d-k ? 1 : 0 for i in block_indices], ctx)
-        else
-            u_k_sigma = PlainArray([-k <= i-(d+k)*d && i-(d+k)*d < d ? 1 : 0 for i in block_indices], ctx)
+        for k in -d+1:d-1
+            if k >= 0
+                u_k_sigma = PlainArray([0 <= i-d*k && i-d*k < d-k ? 1 : 0 for i in block_indices], ctx)
+            else
+                u_k_sigma = PlainArray([-k <= i-(d+k)*d && i-(d+k)*d < d ? 1 : 0 for i in block_indices], ctx)
+            end
+            # Note that Rot(ct; i) in the paper is a leftshift, i.e. circshift(ct, -i)
+            sm1_sigma += circshift(sm1, -(k)) .* u_k_sigma
         end
-        # Note that Rot(ct; i) in the paper is a leftshift, i.e. circshift(ct, -i)
-        sm1_sigma += circshift(sm1, -(k)) .* u_k_sigma
+        sm1_sigma
     end
 
     # Step 1-2
     # Compute linear Transformation tau on B
+    function tau(sm2)
+        sm2_tau = PlainArray(zeros(storage), ctx)
 
-
-    sm2_tau = PlainArray(zeros(storage), ctx)
-
-    for k in 0:d-1
-        u_dk_tau = PlainArray([(i - k) / d in 0:d-1 ? 1 : 0 for  i in block_indices], ctx)
-        sm2_tau += circshift(sm2, -(d*k)) .* u_dk_tau
+        for k in 0:d-1
+            u_dk_tau = PlainArray([(i - k) / d in 0:d-1 ? 1 : 0 for  i in block_indices], ctx)
+            sm2_tau += circshift(sm2, -(d*k)) .* u_dk_tau
+        end
+        sm2_tau
     end
 
-    # Steps 2 and 3
-    sm3 = sm1_sigma .* sm2_tau
-    for k in 1:l-1
+    # Steps 2 and 3: the k-th shifts of sigma(Ā) and tau(B)
+    function phi(sm1_sigma, k)
         v_k = PlainArray([0 <= (i % d) && (i % d) < (d-k) ? 1 : 0 for  i in block_indices], ctx)
         v_k_d = PlainArray([(d-k) <= (i % d) && (i % d) < d ? 1 : 0 for  i in block_indices], ctx)
-        sm1_k = circshift(sm1_sigma, -(k)) .* v_k + circshift(sm1_sigma, -(k-d)) .* v_k_d
-        sm2_k = circshift(sm2_tau, -(d*k))
-        sm3 += sm1_k .* sm2_k
+        circshift(sm1_sigma, -(k)) .* v_k + circshift(sm1_sigma, -(k-d)) .* v_k_d
+    end
+    psi(sm2_tau, k) = circshift(sm2_tau, -(d*k))
+
+    n_rows2, n_inner = size(blocks2)
+    n_cols1 = size(blocks1, 2)
+    sums = Matrix{Any}(nothing, n_rows2, n_cols1)
+    for k in 1:n_inner
+        # sigma and its shifts of the blocks of `sm1` in block row k, reused for every block
+        # row of `sm2`
+        sm1_k = map(1:n_cols1) do j
+            sm1_sigma = sigma(blocks1[k, j])
+            [m == 0 ? sm1_sigma : phi(sm1_sigma, m) for m in 0:l-1]
+        end
+        for i in 1:n_rows2
+            # tau and each of its shifts of a block of `sm2`, reused for every block column
+            sm2_tau = tau(blocks2[i, k])
+            for m in 0:l-1
+                sm2_m = m == 0 ? sm2_tau : psi(sm2_tau, m)
+                for j in 1:n_cols1
+                    term = sm1_k[j][m+1] .* sm2_m
+                    sums[i, j] = sums[i, j] === nothing ? term : sums[i, j] + term
+                end
+            end
+        end
     end
 
     # Step 4 (aggregation for rectangular matrix multiplication)
@@ -206,12 +240,16 @@ function row_mat_times_mat(sm1, sm2)
     # the result is a faithful tile of the padded (d, l) block and can serve as an operand of
     # another multiplication. In the layout of the paper, where the d² block sits in a larger,
     # zero-padded ciphertext, the same rotations pull in zeros instead and do leave partial
-    # sums above l*d.
+    # sums above l*d. The aggregation is linear, so it is applied once to each sum of products.
     r = d ÷ l
     p = Int(log2(r))
-    for k in 0:p-1
-        sm3 += circshift(sm3, -(l*d*2^k))
+    results = map(sums) do sm3
+        for k in 0:p-1
+            sm3 += circshift(sm3, -(l*d*2^k))
+        end
+        sm3
     end
+    sm3 = length(results) == 1 ? only(results) : join_storage(vec(results))
 
     return pack_result(sm3, shape, (d, l))
 end

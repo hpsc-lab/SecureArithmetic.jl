@@ -18,7 +18,7 @@ jobs:
   benchmark:
     name: Run benchmarks
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 360
     steps:
       - name: Checkout SecureArithmetic.jl
         uses: actions/checkout@v7
