@@ -1,0 +1,218 @@
+module TestLinearAlgebra
+
+using Test
+using Random
+using SecureArithmetic
+using OpenFHE
+
+function make_context()
+    level_budget = [4, 4]
+    levels_after_bootstrap = 10
+    depth = levels_after_bootstrap + GetBootstrapDepth(level_budget, UNIFORM_TERNARY)
+
+    parameters = CCParams{CryptoContextCKKSRNS}()
+    SetSecretKeyDist(parameters, UNIFORM_TERNARY)
+    SetSecurityLevel(parameters, HEStd_NotSet)
+    SetRingDim(parameters, 1 << 5)
+    SetScalingModSize(parameters, 59)
+    SetScalingTechnique(parameters, FLEXIBLEAUTO)
+    SetFirstModSize(parameters, 60)
+    SetMultiplicativeDepth(parameters, depth)
+
+    cc = GenCryptoContext(parameters)
+    Enable(cc, PKE)
+    Enable(cc, KEYSWITCH)
+    Enable(cc, LEVELEDSHE)
+    Enable(cc, ADVANCEDSHE)
+    Enable(cc, FHE)
+
+    EvalBootstrapSetup(cc; level_budget)
+
+    context = SecureContext(OpenFHEBackend(cc))
+    public_key, private_key = generate_keys(context)
+
+
+    return (context, public_key, private_key)
+end 
+
+@testset verbose=true showtiming=true "test_linear_algebra.jl" begin
+
+@testset verbose=true showtiming=true "square_col_mat_mat_mul" begin
+    (context, public_key, private_key) = make_context()
+
+    m1 = collect([0.25 0.5 0.75;
+         1.0 2.0 3.0;
+         4.0 5.0 6.0])
+        
+    m2 = collect([6.0 5.0 4.0;
+          3.0 2.0 1.0;
+          0.75 0.5 0.25])
+
+    pm1 = PlainMatrix(m1, context)
+    pm2 = PlainMatrix(m2, context)
+
+
+    sm1 = encrypt(pm1, public_key)
+    sm2 = encrypt(pm2, public_key)
+    
+    init_matrix_multiplication!(context, private_key, size(m1), size(m2))
+    init_multiplication!(context, private_key)
+
+    
+
+    expected = [  3.5625   2.625   1.6875;
+                        14.25    10.5     6.75;
+                        43.5     33.0    22.5]
+
+    @test collect(decrypt(sm1 * sm2, private_key)) ≈ expected   
+    @test collect(decrypt(sm1 * pm2, private_key)) ≈ expected   
+    @test collect(decrypt(pm1 * sm2, private_key)) ≈ expected
+    @test collect(pm1 * pm2) ≈ expected
+
+    # `*` runs the packed kernel, but it packs its operands and unpacks the result again, so a
+    # product of flat operands is flat - which is also what makes `decrypt!` into a
+    # pre-allocated `PlainMatrix` work.
+    @test sm1 * sm2 isa SecureMatrix
+    @test pm1 * pm2 isa PlainMatrix
+    @test size(sm1 * sm2) == size(expected)
+
+    target = PlainMatrix(zeros(size(expected)), context)
+    decrypt!(target, sm1 * sm2, private_key)
+    @test collect(target) ≈ expected
+end
+
+@testset verbose=true showtiming=true "rect_col_mat_mat_mul" begin
+    (context, public_key, private_key) = make_context()
+
+    m1 = collect([0.25 0.5 0.75 1.0;
+         1.0 2.0 3.0 4.0;
+         4.0 5.0 6.0 7.0;
+         2.0 4.0 8.0 16.0;
+         ])
+        
+    m2 = collect([6.0 5.0;
+          3.0 2.0;
+          0.75 0.5
+          2.0 4.0
+          ])
+
+    pm1 = PlainMatrix(m1, context)
+    pm2 = PlainMatrix(m2, context)
+
+
+    sm1 = encrypt(pm1, public_key)
+    sm2 = encrypt(pm2, public_key)
+    
+    init_matrix_multiplication!(context, private_key, size(m1), size(m2))
+    init_multiplication!(context, private_key)
+
+    
+
+    expected = [  
+        5.5625   6.625
+        22.25    26.5
+        57.5     61.0
+        62.0     86.0
+    ]
+
+    @test collect(decrypt(sm1 * sm2, private_key)) ≈ expected   
+    @test collect(decrypt(sm1 * pm2, private_key)) ≈ expected   
+    @test collect(decrypt(pm1 * sm2, private_key)) ≈ expected
+    @test collect(pm1 * pm2) ≈ expected
+end
+
+@testset verbose=true showtiming=true "mat_times_vec" begin
+    (context, public_key, private_key) = make_context()
+
+    Random.seed!(3141)
+
+    batch_size = OpenFHE.GetBatchSize(OpenFHE.GetEncodingParams(SecureArithmetic.get_crypto_context(context)))
+    d_fits_batch_size = Int(floor(sqrt(batch_size)))
+
+    for d in [d_fits_batch_size, d_fits_batch_size+1]
+        m = rand(d,d)
+        v = rand(d)
+        @testset "$(d)x$(d)" begin
+            pm = PlainMatrix(m, context)
+            pv = PlainVector(v, context)
+
+            sm = encrypt(pm, public_key)
+            sv = encrypt(pv, public_key)
+
+            init_matrix_multiplication!(context, private_key, size(m), size(v))
+            init_multiplication!(context, private_key)
+
+            expected = m * v
+
+            @test collect(decrypt(sm * sv, private_key)) ≈ expected
+            @test collect(decrypt(sm * pv, private_key)) ≈ expected
+            @test collect(decrypt(pm * sv, private_key)) ≈ expected
+            @test collect(pm * pv) ≈ expected
+
+            # A vector operand gives a vector back, as in Base - the `d×1` matrix the kernel
+            # multiplies is an internal detail
+            @test sm * sv isa SecureVector
+            @test pm * pv isa PlainVector
+            @test size(sm * sv) == (d,)
+        end
+    end
+end
+
+
+# Each case gets a fresh context, so only the rotation keys generated by
+# `init_matrix_multiplication!` are available. A shift that the algorithm performs but
+# `compute_matrix_multiplication_shifts` or `compute_packing_shifts` does not report therefore
+# makes these tests fail, which guards the shift derivations against drifting away from
+# `row_mat_times_mat`, from the conversion that packs the operands, and from the one that
+# unpacks the result again.
+@testset verbose=true showtiming=true "mat_mat_mul_rotation_keys" begin
+    Random.seed!(3141)
+
+    # (d, l) pairs covering the branches of the multiplication algorithm, which runs on the
+    # dimensions padded to the next power of two:
+    # l == d                           no aggregation at all
+    # padded l < padded d              aggregation by repeated doubling
+    # padded d^2 <= batch_size (16)    single ciphertext
+    # padded d^2 >  batch_size         rotations across ciphertext boundaries
+    for (d, l) in [(2, 2),   # square, single ciphertext
+                   (4, 2),   # r = 2, single ciphertext
+                   (4, 1),   # r = 4, single ciphertext
+                   (5, 5),   # padded to 8x8, square, multiple ciphertexts
+                   (6, 2),   # padded to 8x8 * 8x2, multiple ciphertexts
+                   (6, 1),   # padded to 8x8 * 8x1, multiple ciphertexts
+                   (6, 4),   # l = 4 does not divide d = 6, but 4 divides the padded 8
+                   (5, 3)]   # padded d > d and l > 1, the only case where unpacking rotates
+        @testset "$(d)x$(d) * $(d)x$(l)" begin
+            (context, public_key, private_key) = make_context()
+
+            m1 = rand(d, d)
+            m2 = rand(d, l)
+
+            pm1 = PlainMatrix(m1, context)
+            pm2 = PlainMatrix(m2, context)
+            sm1 = encrypt(pm1, public_key)
+            sm2 = encrypt(pm2, public_key)
+
+            init_matrix_multiplication!(context, private_key, size(m1), size(m2))
+            init_multiplication!(context, private_key)
+
+            expected = m1 * m2
+
+            @test collect(decrypt(sm1 * sm2, private_key)) ≈ expected
+            @test collect(decrypt(sm1 * pm2, private_key)) ≈ expected
+            @test collect(decrypt(pm1 * sm2, private_key)) ≈ expected
+            @test collect(pm1 * pm2) ≈ expected
+
+            release_context_memory()
+            GC.gc()
+        end
+    end
+end
+
+
+release_context_memory()
+GC.gc()
+
+end # @testset "test_linear_algebra.jl"
+
+end # module

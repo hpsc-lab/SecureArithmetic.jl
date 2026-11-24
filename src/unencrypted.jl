@@ -135,7 +135,7 @@ Return the real-valued data contained in `pa`.
 See also: [`PlainArray`](@ref)
 """
 function Base.collect(pa::PlainArray{<:Unencrypted})
-    pa.data
+    reshape(pa.data, pa.shape)
 end
 
 """
@@ -274,4 +274,23 @@ end
 
 function rotate(sa::SecureArray{<:Unencrypted, N}, shift) where N
     SecureArray(circshift(sa.data, shift), size(sa), capacity(sa), sa.context)
+end
+
+# Number of slots in a single plaintext/ciphertext of `context`. The `Unencrypted` backend
+# does not batch at all - every array is stored as-is - so one "slot" per container means a
+# packed array keeps exactly one tile, which is all the packed kernel needs here: rotations
+# of an unencrypted array are plain `circshift`s of the logical data and never cost a level.
+slot_count(context::SecureContext{<:Unencrypted}) = 1
+
+# Repeat the whole storage of `a` `factor` times, extending the packed tiling.
+function replicate_storage(a::SecureArray{<:Unencrypted, 1}, factor::Integer)
+    factor == 1 && return a
+    data = repeat(a.data, factor)
+    SecureArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
+end
+
+function replicate_storage(a::PlainArray{<:Unencrypted, 1}, factor::Integer)
+    factor == 1 && return a
+    data = repeat(a.data, factor)
+    PlainArray(data, (length(a) * factor,), capacity(a) * factor, a.context)
 end

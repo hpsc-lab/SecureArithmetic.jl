@@ -5,5 +5,7 @@ using Test
     include("test_serialization.jl")
     include("test_examples.jl")
     include("test_benchmarks.jl")
+    include("test_linear_algebra.jl")
+    include("test_packed.jl")
 end
 
